@@ -29,7 +29,7 @@
 HINSTANCE globalHInstance;
 HWND hwndMain;
 
-#define DEBUG
+//#define DEBUG
 
 #ifdef DEBUG
 void debug_printf(const char *fmt, ...);

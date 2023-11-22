@@ -269,6 +269,7 @@ static struct AddrButton* addAddrButton() {
 	addrButtons = realloc(addrButtons, numAddrButtons * sizeof(struct AddrButton));
 	struct AddrButton* button = &addrButtons[index];
 	button->hwnd = CreateWindowEx(0, WC_BUTTON, NULL, WS_CHILD | WS_CLIPSIBLINGS, 0, 0, 0, 0, hwndNavbar, (HMENU)NULL, globalHInstance, NULL);
+	button->isArrow = false;
 	SendMessage(button->hwnd, WM_SETFONT, (WPARAM)GetStockObject(DEFAULT_GUI_FONT), 0);
 	return button;
 }
