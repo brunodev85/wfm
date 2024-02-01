@@ -1,5 +1,5 @@
-if exist debug.txt del debug.txt
 if exist wfm.exe del wfm.exe
-mingw32-make.exe all
-wfm.exe
+if exist debug.txt del debug.txt
+set PATH=C:\w64devkit\bin
+make
 pause

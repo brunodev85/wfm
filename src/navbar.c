@@ -30,6 +30,13 @@ static bool searchEditEmpty = true;
 static struct AddrButton* addrButtons = NULL;
 static int numAddrButtons = 0;
 
+extern struct FileNode* currPathFileNode;
+extern HINSTANCE globalHInstance;
+extern HWND hwndMain;
+extern HWND hwndContentView;
+
+HWND hwndNavbar = NULL;
+
 static void createMorePopupMenu(struct FileNode* parent) {	
 	HMENU menu = CreatePopupMenu();
 
@@ -118,7 +125,7 @@ LRESULT CALLBACK NavbarWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam
 		case WM_CTLCOLORSTATIC: {
 			HWND hwndControl = (HWND)lParam;
 			if (hwndControl == hwndAddrEditWrapper) {
-				return isEditMode ? (HBRUSH)GetStockObject(WHITE_BRUSH) : (HBRUSH)COLOR_WINDOW;
+				return isEditMode ? GetSysColorBrush(COLOR_WINDOW) : GetSysColorBrush(COLOR_BTNFACE);
 			}
 			else if (hwndControl == hwndSearchEditWrapper) {
 				return (HBRUSH)GetStockObject(WHITE_BRUSH);

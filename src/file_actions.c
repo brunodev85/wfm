@@ -26,12 +26,13 @@ struct ActionData {
 static HWND hwndDlg;
 static HICON preloaderIcons[8];
 static int preloaderIconIndex = 0;
-
 static wchar_t** clipboard = NULL;
 static int clipboardSize = 0;
 static bool clipboardIsCut = false;
-
 static struct ActionData* actionData = NULL;
+
+extern HINSTANCE globalHInstance;
+extern HWND hwndMain;
 
 static void animatePreloader() {
 	SendDlgItemMessage(hwndDlg, IDC_PRELOADER, STM_SETICON, (WPARAM)preloaderIcons[preloaderIconIndex], 0);
@@ -124,16 +125,14 @@ INT_PTR CALLBACK FileActionDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPA
     return (INT_PTR)FALSE;
 }
 
-static void fileActionTask(void* data) {
-	struct ActionData* actionData = (struct ActionData*)data;
-	
-	SYSTEMTIME st;
-	GetSystemTime(&st);
-	WORD lastSecond = st.wSecond;
+static DWORD WINAPI fileActionTask(void* param) {
+	struct ActionData* actionData = (struct ActionData*)param;
+	DWORD lastTime = GetTickCount();
 
 	for (int i = 0; i < actionData->numSrcPaths && !actionData->cancel; i++) {	
 		if (actionData->action == ACTION_DELETE) {
 			SHFILEOPSTRUCT sfo;
+			memset(&sfo, 0, sizeof(sfo));
 			sfo.hwnd = hwndDlg;
 			sfo.wFunc = FO_DELETE;
 			sfo.fFlags = FOF_SILENT | FOF_NOCONFIRMATION | FOF_NOERRORUI;
@@ -145,6 +144,7 @@ static void fileActionTask(void* data) {
 		}
 		else if (actionData->action == ACTION_COPY || actionData->action == ACTION_MOVE) {
 			SHFILEOPSTRUCT sfo;
+			memset(&sfo, 0, sizeof(sfo));
 			sfo.hwnd = hwndDlg;
 			sfo.wFunc = actionData->action == ACTION_COPY ? FO_COPY : FO_MOVE;
 			sfo.fFlags = FOF_SILENT;
@@ -155,14 +155,15 @@ static void fileActionTask(void* data) {
 			if (res != 0) break;			
 		}
 
-		GetSystemTime(&st);
-		if ((st.wSecond - lastSecond) >= 3) {
+		DWORD currTime = GetTickCount();
+		if ((currTime - lastTime) >= 3000) {
 			SendMessage(hwndDlg, MSG_NAVIGATE_REFRESH, 0, 0);
-			lastSecond = st.wSecond;
+			lastTime = currTime;
 		}
 	}
 	
 	SendMessage(hwndDlg, MSG_CLOSE, 0, 0);
+	return 0;
 }
 
 static wchar_t** createPathsFromFileNodes(struct FileNode** nodes, int count) {
@@ -183,11 +184,11 @@ static wchar_t** createPathsFromFileNodes(struct FileNode** nodes, int count) {
 }
 
 void deleteFiles(struct FileNode** nodes, int count) {
-	wchar_t msg[64];
+	wchar_t msg[128];
 	if (count == 1) {
-		swprintf_s(msg, 64, L"Are you sure you want to delete \"%ls\"?", nodes[0]->name);
+		swprintf_s(msg, 128, L"Are you sure you want to delete \"%ls\"?", nodes[0]->name);
 	}
-	else swprintf_s(msg, 64, L"Are you sure you want to delete the %d items?", count);
+	else swprintf_s(msg, 128, L"Are you sure you want to delete the %d items?", count);
 
 	if (MessageBox(NULL, msg, L"Confirm Delete", MB_YESNO | MB_ICONQUESTION) == IDYES) {
 		actionData = malloc(sizeof(struct ActionData));
@@ -199,7 +200,7 @@ void deleteFiles(struct FileNode** nodes, int count) {
 		
 		hwndDlg = CreateDialogParam(globalHInstance, MAKEINTRESOURCE(IDD_FILE_ACTION), hwndMain, &FileActionDialogProc, 0);		
 		SetTimer(hwndDlg, ID_EVENT_PRELOADER, PRELOADER_PERIOD, NULL);
-		_beginthread(&fileActionTask, 0, actionData);
+		CreateThread(NULL, 0, fileActionTask, actionData, 0, NULL);
 		ShowWindow(hwndDlg, SW_SHOW);
 	}
 }
@@ -236,7 +237,7 @@ void pasteFiles(wchar_t* dstDir) {
 	
 	hwndDlg = CreateDialogParam(globalHInstance, MAKEINTRESOURCE(IDD_FILE_ACTION), hwndMain, &FileActionDialogProc, 0);		
 	SetTimer(hwndDlg, ID_EVENT_PRELOADER, PRELOADER_PERIOD, NULL);
-	_beginthread(&fileActionTask, 0, actionData);
+	CreateThread(NULL, 0, fileActionTask, actionData, 0, NULL);
 	ShowWindow(hwndDlg, SW_SHOW);	
 }
 

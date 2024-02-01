@@ -1,8 +1,6 @@
 #ifndef TOOLBAR_H
 #define TOOLBAR_H
 
-HWND hwndToolbar;
-
 void createToolbar();
 void toolbarCommand(int command);
 void onUpButtonClick();

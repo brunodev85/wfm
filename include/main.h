@@ -26,9 +26,6 @@
 #include "file_utils.h"
 #include "input_dialog.h"
 
-HINSTANCE globalHInstance;
-HWND hwndMain;
-
 //#define DEBUG
 
 #ifdef DEBUG

@@ -1,5 +1,11 @@
 #include "main.h"
 
+extern struct FileNode* treeFileNode;
+extern HINSTANCE globalHInstance;
+extern HWND hwndMain;
+
+HWND hwndTreeview = NULL;
+
 void updateTreeItemsDeep(HTREEITEM parentItem, struct FileNode* parentNode) {
 	HTREEITEM child = TreeView_GetChild(hwndTreeview, parentItem);
 	

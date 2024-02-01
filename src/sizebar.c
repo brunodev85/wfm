@@ -9,6 +9,12 @@ static HCURSOR cursorArrow;
 static HCURSOR cursorSizeLR;
 static HWND hwndPrevCapture;
 
+extern HINSTANCE globalHInstance;
+extern HWND hwndMain;
+extern HWND hwndTreeview;
+
+HWND hwndSizebar = NULL;
+
 static void setMouseTracking() {
     TRACKMOUSEEVENT tme = {};
     tme.cbSize = sizeof(TRACKMOUSEEVENT);

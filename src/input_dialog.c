@@ -10,6 +10,9 @@ struct Options {
 static struct Options options;
 static wchar_t* result = NULL;
 
+extern HINSTANCE globalHInstance;
+extern HWND hwndMain;
+
 INT_PTR CALLBACK InputDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
 	switch (msg) {		
 		case WM_COMMAND: {

@@ -19,9 +19,6 @@ struct FileNode {
 	bool hasChildDirs;
 };
 
-struct FileNode* treeFileNode;
-struct FileNode* currPathFileNode;
-
 void initFileNodes();
 bool isPathExists(wchar_t* path);
 wchar_t* getDesktopPath();

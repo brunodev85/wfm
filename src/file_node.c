@@ -4,6 +4,9 @@ static const wchar_t desktopName[] = L"Desktop";
 static const wchar_t documentsName[] = L"Documents";
 static const wchar_t computerName[] = L"Computer";
 
+struct FileNode* treeFileNode = NULL;
+struct FileNode* currPathFileNode = NULL;
+
 static wchar_t desktopPath[MAX_PATH];
 static wchar_t personalPath[MAX_PATH];
 
@@ -41,8 +44,9 @@ void freeChildNodes(struct FileNode* parent) {
 	struct FileNode* child = parent->children;
 	while (child) {
 		freeChildNodes(child);
+		struct FileNode* sibling = child->sibling;
 		free(child);
-		child = child->sibling;
+		child = sibling;
 	}
 	parent->children = NULL;
 }
@@ -222,8 +226,8 @@ void initFileNodes() {
 }
 
 int getFileNodePath(struct FileNode* node, wchar_t* path) {
-	struct FileNode* currNode = node;	
-	wcscpy_s(path, MAX_PATH, L"");
+	struct FileNode* currNode = node;
+	wmemset(path, L'\0', MAX_PATH);
 	wchar_t tmp[MAX_PATH];
 	int count = 0;
 	

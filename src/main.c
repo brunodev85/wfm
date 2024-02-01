@@ -14,6 +14,17 @@ void debug_printf(const char *fmt, ...) {
 
 static const wchar_t mainWndClass[] = L"WFM-MainWnd";
 
+extern struct FileNode* currPathFileNode;
+extern HWND hwndContentView;
+extern HWND hwndNavbar;
+extern HWND hwndSizebar;
+extern HWND hwndStatusbar;
+extern HWND hwndToolbar;
+extern HWND hwndTreeview;
+
+HINSTANCE globalHInstance = NULL;
+HWND hwndMain = NULL;
+
 void GetWindowRectInParent(HWND hwnd, RECT* rect) {
 	GetWindowRect(hwnd, rect);
 	MapWindowPoints(HWND_DESKTOP, GetParent(hwnd), (LPPOINT)rect, 2);

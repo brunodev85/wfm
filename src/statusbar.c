@@ -1,5 +1,10 @@
 #include "main.h"
 
+extern HINSTANCE globalHInstance;
+extern HWND hwndMain;
+
+HWND hwndStatusbar = NULL;
+
 void setStatusbarText(wchar_t* text) {
 	SetWindowText(hwndStatusbar, text); 
 }

@@ -65,13 +65,19 @@ static int numSelectedItems = 0;
 
 static struct SearchData* searchData;
 
+extern struct FileNode* currPathFileNode;
+extern HINSTANCE globalHInstance;
+extern HWND hwndMain;
+
+HWND hwndContentView = NULL;
+
 static void updateStatusbar() {
 	wchar_t statusText[32];
 	swprintf_s(statusText, 32, L"%d Items", numItems);
 	setStatusbarText(statusText);	
 }
 
-static freeItems() {
+static void freeItems() {
 	if (items) {
 		for (int i = 0; i < numItems; i++) {
 			if (items[i].path) free(items[i].path);
@@ -322,8 +328,8 @@ LRESULT contentViewNotify(NMHDR* nmhdr) {
 	return 0;	
 }
 
-static void searchTask(void* data) {
-	struct SearchData* searchData = (struct SearchData*)data;
+static DWORD WINAPI searchTask(void* param) {
+	struct SearchData* searchData = (struct SearchData*)param;
 	
 	const int maxStackSize = 50;
 	struct FileNode* stack[maxStackSize];
@@ -348,6 +354,7 @@ static void searchTask(void* data) {
 	}
 	
 	SendMessage(hwndContentView, MSG_SEARCH_DONE, 0, 0);
+	return 0;
 }
 
 void searchFor(wchar_t* keyword) {
@@ -373,7 +380,8 @@ void searchFor(wchar_t* keyword) {
 	searchData->keyword = keyword;
 	searchData->active = true;
 	searchData->canceled = false;
-	_beginthread(&searchTask, 0, searchData);	
+
+	CreateThread(NULL, 0, searchTask, searchData, 0, NULL);
 }
 
 void setViewStyle(enum ViewStyle newViewStyle) {

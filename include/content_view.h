@@ -8,8 +8,6 @@ enum ViewStyle {
 	STYLE_DETAILS
 };
 
-HWND hwndContentView;
-
 LRESULT contentViewNotify(NMHDR* nmhdr);
 void createContentView();
 void refreshContentView();
