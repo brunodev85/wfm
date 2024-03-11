@@ -1,10 +1,10 @@
 #include "main.h"
 
 struct Options {
-	wchar_t* title;
-	wchar_t* label;
-	wchar_t* defaultText;
-	bool selectAll;
+    wchar_t* title;
+    wchar_t* label;
+    wchar_t* defaultText;
+    bool selectAll;
 };
 
 static struct Options options;
@@ -14,25 +14,25 @@ extern HINSTANCE globalHInstance;
 extern HWND hwndMain;
 
 INT_PTR CALLBACK InputDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
-	switch (msg) {		
-		case WM_COMMAND: {
+    switch (msg) {      
+        case WM_COMMAND: {
             if (LOWORD(wParam) == IDOK) {
-				HWND hwndEdit = GetDlgItem(hwndDlg, IDC_EDIT);
+                HWND hwndEdit = GetDlgItem(hwndDlg, IDC_EDIT);
                 int len = GetWindowTextLength(hwndEdit);
-				if (len > 0) {
-					result = malloc((len + 1) * sizeof(wchar_t));
-					SendMessage(hwndEdit, WM_GETTEXT, len + 1, (LPARAM)result);
-				}
+                if (len > 0) {
+                    result = malloc((len + 1) * sizeof(wchar_t));
+                    SendMessage(hwndEdit, WM_GETTEXT, len + 1, (LPARAM)result);
+                }
                 EndDialog(hwndDlg, LOWORD(wParam));
                 return (INT_PTR)TRUE;
             } 
-			else if (LOWORD(wParam) == IDCANCEL) {
+            else if (LOWORD(wParam) == IDCANCEL) {
                 EndDialog(hwndDlg, LOWORD(wParam));
                 return (INT_PTR)TRUE;
             }
-			break;
-		}
-		case WM_INITDIALOG: {
+            break;
+        }
+        case WM_INITDIALOG: {
             RECT rect, rect1;
             GetWindowRect(GetParent(hwndDlg), &rect);
             GetClientRect(hwndDlg, &rect1);
@@ -42,35 +42,35 @@ INT_PTR CALLBACK InputDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM l
 
             SetWindowText(hwndDlg, options.title);
             SetWindowText(GetDlgItem(hwndDlg, IDC_LABEL), options.label);
-			
-			HWND hwndEdit = GetDlgItem(hwndDlg, IDC_EDIT);
+            
+            HWND hwndEdit = GetDlgItem(hwndDlg, IDC_EDIT);
             SetWindowText(hwndEdit, options.defaultText);
 
             SendMessage(hwndDlg, WM_NEXTDLGCTL, (WPARAM)hwndEdit, TRUE);
             if (options.selectAll) SendMessage(hwndEdit, EM_SETSEL, 0, -1);
-			break;
-		}
-	}
+            break;
+        }
+    }
 
-	return (INT_PTR)FALSE;	
+    return (INT_PTR)FALSE;  
 }
 
 wchar_t* InputDialog(wchar_t* title, wchar_t* label, wchar_t* defaultText, bool selectAll) {
-	options.title = title;
-	options.label = label;
-	options.defaultText = defaultText;
-	options.selectAll = selectAll;
-	
-	if (result) {
-		free(result);
-		result = NULL;
-	}
-	
-	DialogBox(globalHInstance, MAKEINTRESOURCE(IDD_INPUT), hwndMain, &InputDialogProc);
-	
-	options.title = NULL;
-	options.label = NULL;
-	options.defaultText = NULL;
-	options.selectAll = false;
-	return result;
+    options.title = title;
+    options.label = label;
+    options.defaultText = defaultText;
+    options.selectAll = selectAll;
+    
+    if (result) {
+        free(result);
+        result = NULL;
+    }
+    
+    DialogBox(globalHInstance, MAKEINTRESOURCE(IDD_INPUT), hwndMain, &InputDialogProc);
+    
+    options.title = NULL;
+    options.label = NULL;
+    options.defaultText = NULL;
+    options.selectAll = false;
+    return result;
 }

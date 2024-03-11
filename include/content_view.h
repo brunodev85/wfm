@@ -2,14 +2,15 @@
 #define CONTENT_VIEW_H
 
 enum ViewStyle {
-	STYLE_LARGE_ICON,
-	STYLE_SMALL_ICON,
-	STYLE_LIST,
-	STYLE_DETAILS
+    STYLE_LARGE_ICON,
+    STYLE_SMALL_ICON,
+    STYLE_LIST,
+    STYLE_DETAILS
 };
 
 LRESULT contentViewNotify(NMHDR* nmhdr);
 void createContentView();
+void clearContentView();
 void refreshContentView();
 void setViewStyle(enum ViewStyle newViewStyle);
 void searchFor(wchar_t* keyword);

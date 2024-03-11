@@ -33,6 +33,7 @@ void debug_printf(const char *fmt, ...);
 #endif
 
 void navigateToFileNode(struct FileNode* node);
+void navigateToPath(wchar_t* path);
 void navigateUp();
 void navigateRefresh();
 void openFileNode(struct FileNode* node);

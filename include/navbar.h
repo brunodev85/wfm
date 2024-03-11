@@ -3,6 +3,7 @@
 
 void createNavbar();
 int getNavbarHeight();
+void clearAddrButtons();
 void updateAddrButtons();
 
 #endif

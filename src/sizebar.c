@@ -25,7 +25,7 @@ static void setMouseTracking() {
 }
 
 LRESULT CALLBACK SizebarWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
-	switch (msg) {
+    switch (msg) {
         case WM_NCHITTEST:
             return HTCLIENT;
         case WM_MOVE: {
@@ -34,7 +34,7 @@ LRESULT CALLBACK SizebarWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
         }
         case WM_SETCURSOR: {
             return 1;
-        }		
+        }       
         case WM_LBUTTONDOWN: {
             startX = MAKEPOINTS(lParam).x;
             hwndPrevCapture = SetCapture(hwnd);
@@ -46,7 +46,7 @@ LRESULT CALLBACK SizebarWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
             if (hwndPrevCapture) SetCapture(hwndPrevCapture);
             isSizing = false;
             break;
-        }		
+        }       
         case WM_MOUSELEAVE: {
             SetCursor(cursorArrow);
             isTracking = false;
@@ -56,31 +56,31 @@ LRESULT CALLBACK SizebarWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
             POINTS point = MAKEPOINTS(lParam);
             if (isSizing) {
                 int dx = point.x - startX;
-				RECT rect;
-				GetWindowRectInParent(hwndTreeview, &rect);
-				int width = (rect.right - rect.left) + dx;
-				if (width > 50) {
-					SetWindowPos(hwndTreeview, NULL, 0, 0, width, rect.bottom - rect.top, SWP_NOZORDER | SWP_NOMOVE);
-					resizeControls();
-				}
+                RECT rect;
+                GetWindowRectInParent(hwndTreeview, &rect);
+                int width = (rect.right - rect.left) + dx;
+                if (width > 50) {
+                    SetWindowPos(hwndTreeview, NULL, 0, 0, width, rect.bottom - rect.top, SWP_NOZORDER | SWP_NOMOVE);
+                    resizeControls();
+                }
             } 
-			else if (!isTracking) {
+            else if (!isTracking) {
                 SetCursor(cursorSizeLR);
                 setMouseTracking();
             }
             break;
-        }		
-	}
-	return OrigWndProc(hwnd, msg, wParam, lParam);
+        }       
+    }
+    return OrigWndProc(hwnd, msg, wParam, lParam);
 }
 
 void createSizebar() {
-	hwndSizebar = CreateWindowEx(0, WC_STATIC, NULL, WS_VISIBLE | WS_CHILD | WS_CLIPSIBLINGS, 
-								 0, 0, 0, 0, hwndMain, (HMENU)NULL, globalHInstance, NULL);
-								 
+    hwndSizebar = CreateWindowEx(0, WC_STATIC, NULL, WS_VISIBLE | WS_CHILD | WS_CLIPSIBLINGS, 
+                                 0, 0, 0, 0, hwndMain, (HMENU)NULL, globalHInstance, NULL);
+                                 
     cursorArrow = LoadCursor(NULL, IDC_ARROW);
-    cursorSizeLR = LoadCursor(NULL, IDC_SIZEWE);								 
-								 
-	OrigWndProc = (WNDPROC)SetWindowLongPtr(hwndSizebar, GWLP_WNDPROC, (LONG_PTR)SizebarWndProc);
-	UpdateWindow(hwndSizebar);
+    cursorSizeLR = LoadCursor(NULL, IDC_SIZEWE);                                 
+                                 
+    OrigWndProc = (WNDPROC)SetWindowLongPtr(hwndSizebar, GWLP_WNDPROC, (LONG_PTR)SizebarWndProc);
+    UpdateWindow(hwndSizebar);
 }

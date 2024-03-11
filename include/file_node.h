@@ -2,21 +2,21 @@
 #define FILE_NODE_H
 
 enum FileType {
-	TYPE_DIR,
-	TYPE_FILE,
-	TYPE_DRIVE,
-	TYPE_DESKTOP,
-	TYPE_PERSONAL,
-	TYPE_COMPUTER
+    TYPE_DIR,
+    TYPE_FILE,
+    TYPE_DRIVE,
+    TYPE_DESKTOP,
+    TYPE_PERSONAL,
+    TYPE_COMPUTER
 };
 
 struct FileNode {
-	wchar_t* name;
-	enum FileType type;
-	struct FileNode* parent;
-	struct FileNode* sibling;
-	struct FileNode* children;
-	bool hasChildDirs;
+    wchar_t* name;
+    enum FileType type;
+    struct FileNode* parent;
+    struct FileNode* sibling;
+    struct FileNode* children;
+    bool hasChildDirs;
 };
 
 void initFileNodes();
