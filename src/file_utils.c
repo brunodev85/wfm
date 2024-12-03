@@ -17,10 +17,14 @@ void formatFileSize(uint64_t size, wchar_t* formattedSize) {
         
         wchar_t *lastDot = wcsrchr(formattedSize, '.');
         if (lastDot != NULL) {
-            int offset = lastDot - formattedSize;
-            if (formattedSize[offset+1] == '0' && formattedSize[offset+2] == '0') {
-                int len = wcslen(formattedSize);
-                for (int i = 0; i < len-3; i++) formattedSize[offset+i] = formattedSize[offset+i+3];
+            if(lastDot[2] == '0') {
+                int offset = 2;
+                int len = wcslen(lastDot);
+
+                if(lastDot[1] == '0')
+                    offset = 0;
+                for(int i = offset; i < len+offset-2; i++)
+                    lastDot[i] = lastDot[i-offset+3];
             }
         }
     }
