@@ -7,7 +7,7 @@ struct Options {
     bool selectAll;
 };
 
-static struct Options options;
+static struct Options options = {0};
 static wchar_t* result = NULL;
 
 extern HINSTANCE globalHInstance;
@@ -20,7 +20,7 @@ INT_PTR CALLBACK InputDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM l
                 HWND hwndEdit = GetDlgItem(hwndDlg, IDC_EDIT);
                 int len = GetWindowTextLength(hwndEdit);
                 if (len > 0) {
-                    result = malloc((len + 1) * sizeof(wchar_t));
+                    result = calloc(len + 1, sizeof(wchar_t));
                     SendMessage(hwndEdit, WM_GETTEXT, len + 1, (LPARAM)result);
                 }
                 EndDialog(hwndDlg, LOWORD(wParam));
@@ -44,7 +44,7 @@ INT_PTR CALLBACK InputDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM l
             SetWindowText(GetDlgItem(hwndDlg, IDC_LABEL), options.label);
             
             HWND hwndEdit = GetDlgItem(hwndDlg, IDC_EDIT);
-            SetWindowText(hwndEdit, options.defaultText);
+            if (options.defaultText) SetWindowText(hwndEdit, options.defaultText);
 
             SendMessage(hwndDlg, WM_NEXTDLGCTL, (WPARAM)hwndEdit, TRUE);
             if (options.selectAll) SendMessage(hwndEdit, EM_SETSEL, 0, -1);
@@ -60,11 +60,7 @@ wchar_t* InputDialog(wchar_t* title, wchar_t* label, wchar_t* defaultText, bool 
     options.label = label;
     options.defaultText = defaultText;
     options.selectAll = selectAll;
-    
-    if (result) {
-        free(result);
-        result = NULL;
-    }
+    result = NULL;
     
     DialogBox(globalHInstance, MAKEINTRESOURCE(IDD_INPUT), hwndMain, &InputDialogProc);
     

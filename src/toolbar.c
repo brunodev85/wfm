@@ -10,13 +10,13 @@ struct ToolButton {
 };
 
 struct ToolButton buttons[] = {
-    {L"Up", 0, &onMenuItemUpClick, true},
-    {L"Copy", 1, &onMenuItemCopyClick, false},
-    {L"Cut", 2, &onMenuItemCutClick, false},
-    {L"Paste", 3, &onMenuItemPasteClick, false},
-    {L"Delete", 4, &onMenuItemDeleteClick, true},
-    {L"New Folder", 5, &onMenuItemNewFolderClick, false},
-    {L"New File", 6, &onMenuItemNewFileClick, false}
+    {STR_UP, 0, &onMenuItemUpClick, true},
+    {STR_COPY, 1, &onMenuItemCopyClick, false},
+    {STR_CUT, 2, &onMenuItemCutClick, false},
+    {STR_PASTE, 3, &onMenuItemPasteClick, false},
+    {STR_DELETE, 4, &onMenuItemDeleteClick, true},
+    {STR_NEW_FOLDER, 5, &onMenuItemNewFolderClick, false},
+    {STR_NEW_FILE, 6, &onMenuItemNewFileClick, false}
 };
 
 static WNDPROC OrigWndProc;
@@ -56,7 +56,7 @@ void createToolButtons() {
     
     SendMessage(hwndToolbar, TB_SETIMAGELIST, 0, (LPARAM)hImageList);
 
-    TBBUTTON tbbSeparator = {};
+    TBBUTTON tbbSeparator = {0};
     tbbSeparator.fsStyle = BTNS_SEP;
 
     TBBUTTON tbButton;

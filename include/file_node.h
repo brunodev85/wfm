@@ -1,13 +1,11 @@
 #ifndef FILE_NODE_H
 #define FILE_NODE_H
 
-enum FileType {
-    TYPE_DIR,
-    TYPE_FILE,
-    TYPE_DRIVE,
-    TYPE_DESKTOP,
-    TYPE_PERSONAL,
-    TYPE_COMPUTER
+#include "file_utils.h"
+
+struct FileMetadata {
+    time_t modifiedTime;
+    uint64_t size;
 };
 
 struct FileNode {
@@ -17,10 +15,10 @@ struct FileNode {
     struct FileNode* sibling;
     struct FileNode* children;
     bool hasChildDirs;
+    struct FileMetadata* metadata;
 };
 
 void initFileNodes();
-bool isPathExists(wchar_t* path);
 wchar_t* getDesktopPath();
 void setCurrPathFileNode(struct FileNode* node);
 void setCurrPathFromString(wchar_t* path);

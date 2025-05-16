@@ -41,17 +41,22 @@ struct ContextMenuItem {
     wchar_t* cmdData;
 };
 
-struct ContextMenuItem cmiOpen = {L"Open", &onMenuItemOpenClick, NULL};
-struct ContextMenuItem cmiEdit = {L"Edit", &onMenuItemEditClick, NULL};
-struct ContextMenuItem cmiCut = {L"Cut", &onMenuItemCutClick, NULL};
-struct ContextMenuItem cmiCopy = {L"Copy", &onMenuItemCopyClick, NULL};
-struct ContextMenuItem cmiCreateShortcut = {L"Create Shortcut", &onMenuItemCreateShortcutClick, NULL};
-struct ContextMenuItem cmiDelete = {L"Delete", &onMenuItemDeleteClick, NULL};
-struct ContextMenuItem cmiRename = {L"Rename", &onMenuItemRenameClick, NULL};
-struct ContextMenuItem cmiPaste = {L"Paste", &onMenuItemPasteClick, NULL};
-struct ContextMenuItem cmiPasteShortcut = {L"Paste Shortcut", &onMenuItemPasteShortcutClick, NULL};
-struct ContextMenuItem cmiNewFolder = {L"New Folder", &onMenuItemNewFolderClick, NULL};
-struct ContextMenuItem cmiNewFile = {L"New File", &onMenuItemNewFileClick, NULL};
+static void onMenuItemMountISOImageClick();
+static void onMenuItemUnmountISOImageClick();
+
+static struct ContextMenuItem cmiOpen = {STR_OPEN, &onMenuItemOpenClick, NULL};
+static struct ContextMenuItem cmiEdit = {STR_EDIT, &onMenuItemEditClick, NULL};
+static struct ContextMenuItem cmiCut = {STR_CUT, &onMenuItemCutClick, NULL};
+static struct ContextMenuItem cmiCopy = {STR_COPY, &onMenuItemCopyClick, NULL};
+static struct ContextMenuItem cmiCreateShortcut = {STR_CREATE_SHORTCUT, &onMenuItemCreateShortcutClick, NULL};
+static struct ContextMenuItem cmiDelete = {STR_DELETE, &onMenuItemDeleteClick, NULL};
+static struct ContextMenuItem cmiRename = {STR_RENAME, &onMenuItemRenameClick, NULL};
+static struct ContextMenuItem cmiPaste = {STR_PASTE, &onMenuItemPasteClick, NULL};
+static struct ContextMenuItem cmiPasteShortcut = {STR_PASTE_SHORTCUT, &onMenuItemPasteShortcutClick, NULL};
+static struct ContextMenuItem cmiNewFolder = {STR_NEW_FOLDER, &onMenuItemNewFolderClick, NULL};
+static struct ContextMenuItem cmiNewFile = {STR_NEW_FILE, &onMenuItemNewFileClick, NULL};
+static struct ContextMenuItem cmiMountISOImage = {NULL, &onMenuItemMountISOImageClick, NULL};
+static struct ContextMenuItem cmiUnmountISOImage = {STR_UNMOUNT_IMAGE, &onMenuItemUnmountISOImageClick, NULL};
 
 static WNDPROC OrigWndProc;
 static struct ListItem* items = NULL;
@@ -75,33 +80,37 @@ extern HWND hwndMain;
 
 HWND hwndContentView = NULL;
 
-static wchar_t *strReplace(wchar_t *str, const wchar_t *oldval, const wchar_t *newval, bool freestr)
-{
-    wchar_t *pwc;
-    pwc = wcsstr(str, oldval);
-    if (!pwc) return str;
-    int offset = pwc - str;
+static void fillFileInfo(struct FileNode* node, struct ListItem* item) {
+    item->size = 0;
+    memset(&item->modifiedTime, 0, sizeof(FILETIME));
     
-    wchar_t *endstr = str + (offset + wcslen(oldval));
-    int resLen = offset + wcslen(newval) + wcslen(endstr) + 1;
-    wchar_t *res = malloc(resLen * sizeof(wchar_t));
-    wcsncpy_s(res, resLen, str, offset);
-    wcscat_s(res, resLen, newval);
-    wcscat_s(res, resLen, endstr);
-    res[resLen-1] = L'\0';
-    
-    if (freestr) free(str);
-    return res;
-}
+    if (node->type == TYPE_FILE) {
+        if (node->metadata) {
+            item->size = node->metadata->size;
+            timetToFileTime(node->metadata->modifiedTime, &item->modifiedTime);
+        }
+        else {
+            LARGE_INTEGER filesize;
+            WIN32_FILE_ATTRIBUTE_DATA info = {0};
 
-static void strToLower(wchar_t* str, wchar_t* output) {
-    wmemset(output, L'\0', 64);
-    for (int i = 0; i < wcslen(str); i++) output[i] = towlower(str[i]);
+            wchar_t path[MAX_PATH] = {0};
+            getFileNodePath(node, path);
+            GetFileAttributesEx(path, GetFileExInfoStandard, &info);        
+            
+            if ((info.dwFileAttributes & FILE_ATTRIBUTE_ARCHIVE)) {
+                filesize.LowPart = info.nFileSizeLow;
+                filesize.HighPart = info.nFileSizeHigh;
+                item->size = filesize.QuadPart;
+            }
+            
+            memcpy(&item->modifiedTime, &info.ftLastWriteTime, sizeof(FILETIME));
+        }        
+    }
 }
 
 static void updateStatusbar() {
-    wchar_t statusText[32];
-    swprintf_s(statusText, 32, L"%d Items", numItems);
+    wchar_t statusText[32] = {0};
+    swprintf_s(statusText, 32, L"%d " STR_ITEMS, numItems);
     setStatusbarText(statusText);   
 }
 
@@ -139,8 +148,7 @@ void clearContentView() {
 }
 
 static void execCommandLine(wchar_t *command) {
-    SHELLEXECUTEINFO shExecInfo;
-    memset(&shExecInfo, 0, sizeof(SHELLEXECUTEINFO));
+    SHELLEXECUTEINFO shExecInfo = {0};
     shExecInfo.cbSize = sizeof(SHELLEXECUTEINFO);
     shExecInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
     shExecInfo.hwnd = hwndMain;
@@ -183,26 +191,10 @@ LRESULT CALLBACK ContentViewWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
                 items = realloc(items, numItems * sizeof(struct ListItem));     
                 struct ListItem* item = &items[index];
                 item->node = node;
-                item->size = 0;
                 item->path = NULL;
                 item->loaded = false;
-
-                if (node->type == TYPE_FILE) {
-                    LARGE_INTEGER filesize;
-                    WIN32_FILE_ATTRIBUTE_DATA info;     
-                    
-                    wchar_t path[MAX_PATH];
-                    getFileNodePath(node, path);
-                    GetFileAttributesEx(path, GetFileExInfoStandard, &info);
-                    
-                    if ((info.dwFileAttributes & FILE_ATTRIBUTE_ARCHIVE)) {
-                        filesize.LowPart = info.nFileSizeLow;
-                        filesize.HighPart = info.nFileSizeHigh;
-                        item->size = filesize.QuadPart;
-                    }
-                    
-                    item->modifiedTime = info.ftLastWriteTime;
-                }
+                
+                fillFileInfo(node, item);
                 
                 ListView_SetItemCountEx(hwndContentView, numItems, LVSICF_NOINVALIDATEALL);
                 updateStatusbar();
@@ -225,10 +217,7 @@ LRESULT CALLBACK ContentViewWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
 }
 
 void updateSelectedItems() {
-    if (selectedItems) {
-        free(selectedItems);
-        selectedItems = NULL;
-    }
+    MEMFREE(selectedItems);
     numSelectedItems = 0;
 
     int i = ListView_GetNextItem(hwndContentView, -1, LVNI_SELECTED);
@@ -241,7 +230,7 @@ void updateSelectedItems() {
 }
 
 static void addContextMenuItem(HMENU hMenu, int id, struct ContextMenuItem* cmItem, bool separate) {
-    MENUITEMINFO item = {};
+    MENUITEMINFO item = {0};
     item.cbSize = sizeof(MENUITEMINFO);
     item.fMask = MIIM_TYPE | MIIM_DATA | MIIM_ID;
     item.fType = MFT_STRING;
@@ -259,22 +248,22 @@ static void addContextMenuItem(HMENU hMenu, int id, struct ContextMenuItem* cmIt
     }
 }
 
-static void createContextMenuFromRegistry(int *id) {
+static void createContextMenuFromRegistry(int* id) {
     freeMenuItems();
     HKEY hkeyContextMenu, hkeyItem;
     if (RegOpenKey(HKEY_CURRENT_USER, L"SOFTWARE\\Winlator\\WFM\\ContextMenu", &hkeyContextMenu) != ERROR_SUCCESS) return;
     
-    WCHAR itemName[30];
-    WCHAR subitemName[100];
+    WCHAR itemName[30] = {0};
+    WCHAR subitemName[100] = {0};
     WCHAR itemValue[MAX_PATH];
     DWORD i, j, itemNameLen, itemValueLen;
     
     i = 0;
     while (i < 10) {
         itemNameLen = 30;    
-        if (RegEnumKey(hkeyContextMenu, i++, itemName, &itemNameLen) != ERROR_SUCCESS) break;
+        if (RegEnumKey(hkeyContextMenu, i++, itemName, itemNameLen) != ERROR_SUCCESS) break;
         if (RegOpenKey(hkeyContextMenu, itemName, &hkeyItem) == ERROR_SUCCESS) {
-            MENUITEMINFO item = {};
+            MENUITEMINFO item = {0};
             item.cbSize = sizeof(MENUITEMINFO);
             item.fMask = MIIM_TYPE | MIIM_ID | MIIM_SUBMENU;
             item.fType = MFT_STRING;
@@ -288,7 +277,7 @@ static void createContextMenuFromRegistry(int *id) {
             while (j < 10) {
                 itemNameLen = 100;
                 itemValueLen = MAX_PATH;
-                if (RegEnumValue(hkeyItem, j++, subitemName, &itemNameLen, NULL, NULL, itemValue, &itemValueLen) != ERROR_SUCCESS) break;
+                if (RegEnumValue(hkeyItem, j++, subitemName, &itemNameLen, NULL, NULL, (LPBYTE)itemValue, &itemValueLen) != ERROR_SUCCESS) break;
                 
                 int index = numMenuItems++;
                 menuItems = realloc(menuItems, numMenuItems * sizeof(struct ContextMenuItem));     
@@ -300,11 +289,11 @@ static void createContextMenuFromRegistry(int *id) {
                 wchar_t *cmdData = malloc(1024);
                 wcscpy_s(cmdData, MAX_PATH, itemValue);
                 
-                wchar_t path[MAX_PATH];
+                wchar_t path[MAX_PATH] = {0};
                 getFileNodePath(selectedItems[0], path);
                 cmdData = strReplace(cmdData, L"%FILE%", path, true);
                 
-                wchar_t basename[80];
+                wchar_t basename[80] = {0};
                 getBasenameFromPath(path, basename, true);
                 cmdData = strReplace(cmdData, L"%BASENAME%", basename, true);                
                 
@@ -330,6 +319,42 @@ static void createContextMenuFromRegistry(int *id) {
     RegCloseKey(hkeyContextMenu);
 }
 
+static void createISOImageContextMenu(int* id) {
+    wchar_t* itemText = STR_ISO_IMAGE;
+    MENUITEMINFO item = {0};
+    item.cbSize = sizeof(MENUITEMINFO);
+    item.fMask = MIIM_TYPE | MIIM_ID | MIIM_SUBMENU;
+    item.fType = MFT_STRING;
+    item.dwTypeData = itemText;
+    item.cch = wcslen(itemText);
+    item.wID = ++(*id);
+    
+    HMENU hSubmenu = CreatePopupMenu();
+    
+    wchar_t currentISOPath[MAX_PATH] = {0};
+    int currentISOPathLen = MAX_PATH;
+    HKEY hkey;
+    if (RegOpenKey(HKEY_CURRENT_USER, L"SOFTWARE\\Winlator\\WFM\\CurrentISOPath", &hkey) == ERROR_SUCCESS) {
+        RegQueryValue(hkey, NULL, currentISOPath, (PLONG)&currentISOPathLen);
+        RegCloseKey(hkey);
+    }
+    
+    itemText = calloc(MAX_PATH, sizeof(wchar_t));
+    swprintf_s(itemText, MAX_PATH, STR_MOUNT_IMAGE L" <%ls>", currentISOPathLen != MAX_PATH ? currentISOPath : STR_NO_MEDIA);
+    cmiMountISOImage.text = itemText;
+    addContextMenuItem(hSubmenu, (*id)++, &cmiMountISOImage, false);
+    MEMFREE(cmiMountISOImage.text);
+    
+    addContextMenuItem(hSubmenu, (*id)++, &cmiUnmountISOImage, false);    
+    
+    item.hSubMenu = hSubmenu;
+    InsertMenuItem(hContextMenu, -1, TRUE, &item);    
+    
+    item.fMask = MIIM_TYPE;
+    item.fType = MFT_SEPARATOR;
+    InsertMenuItem(hContextMenu, -1, TRUE, &item);    
+}
+
 static void createContextMenu(enum ContextMenuType type) {
     HMENU hMenu = CreatePopupMenu();
     hContextMenu = hMenu;
@@ -341,6 +366,7 @@ static void createContextMenu(enum ContextMenuType type) {
             if (selectedItems[0]->type == TYPE_FILE) {
                 addContextMenuItem(hMenu, id++, &cmiOpen, false);
                 addContextMenuItem(hMenu, id++, &cmiEdit, true);
+                createISOImageContextMenu(&id);
                 createContextMenuFromRegistry(&id);
             }
             else addContextMenuItem(hMenu, id++, &cmiOpen, true);
@@ -355,6 +381,7 @@ static void createContextMenu(enum ContextMenuType type) {
     else {
         addContextMenuItem(hMenu, id++, &cmiPaste, false);
         addContextMenuItem(hMenu, id++, &cmiPasteShortcut, true);
+        createISOImageContextMenu(&id);
         addContextMenuItem(hMenu, id++, &cmiNewFolder, false);
         addContextMenuItem(hMenu, id++, &cmiNewFile, false);
     }
@@ -372,27 +399,24 @@ LRESULT contentViewNotify(NMHDR* nmhdr) {
             struct ListItem* item = &items[nmlvdi->item.iItem];
             
             if (!item->loaded) {
-                SHFILEINFO sfi;
-                wchar_t path[MAX_PATH];
+                wchar_t path[MAX_PATH] = {0};
                 getFileNodePath(item->node, path);
                 
-                if (viewStyle == STYLE_LARGE_ICON) {
-                    SHGetFileInfo(path, 0, &sfi, sizeof(SHFILEINFO), SHGFI_SYSICONINDEX | SHGFI_ICON | SHGFI_TYPENAME);
-                }
-                else SHGetFileInfo(path, 0, &sfi, sizeof(SHFILEINFO), SHGFI_SYSICONINDEX | SHGFI_SMALLICON | SHGFI_TYPENAME);
+                struct FileInfo fi = {0};
+                getFileInfo(path, item->node->type, viewStyle == STYLE_LARGE_ICON, &fi);
 
                 if (item->node->type == TYPE_FILE) {
                     formatFileSize(item->size, item->formattedSize);
                     
-                    SYSTEMTIME systemTime;
+                    SYSTEMTIME systemTime = {0};
                     FILETIME localFiletime;
                     if (FileTimeToLocalFileTime(&item->modifiedTime, &localFiletime) && FileTimeToSystemTime(&localFiletime, &systemTime)) {
-                        swprintf_s(&item->formattedDate, 32, L"%02d/%02d/%04d %02d:%02d", systemTime.wMonth, systemTime.wDay, systemTime.wYear, systemTime.wHour, systemTime.wMinute);
+                        formatModifiedDate(systemTime.wMonth, systemTime.wDay, systemTime.wYear, systemTime.wHour, systemTime.wMinute, item->formattedDate, 32);
                     }
                 }
 
-                item->icon = sfi.iIcon;
-                wcscpy_s(item->type, 80, sfi.szTypeName);
+                item->icon = fi.icon;
+                wcscpy_s(item->type, 80, fi.typeName);
                 item->loaded = true;                
             }
             
@@ -420,7 +444,7 @@ LRESULT contentViewNotify(NMHDR* nmhdr) {
                         break;
                     case COLUMN_PATH_IDX: {
                         if (!item->path) {
-                            wchar_t path[MAX_PATH];
+                            wchar_t path[MAX_PATH] = {0};
                             getFileNodePath(item->node, path);
                             item->path = wcsdup(path);
                         }
@@ -484,8 +508,8 @@ static DWORD WINAPI searchTask(void* param) {
     int stackSize = 0;
     stack[stackSize++] = currPathFileNode->children;
     
-    wchar_t keyword[64];
-    wchar_t name[64];
+    wchar_t keyword[64] = {0};
+    wchar_t name[64] = {0};
     
     strToLower(searchData->keyword, keyword);
     
@@ -520,10 +544,10 @@ void searchFor(wchar_t* keyword) {
     
     clearContentView();
     
-    LVCOLUMN column = {};
+    LVCOLUMN column = {0};
     column.mask = LVCF_WIDTH | LVCF_TEXT;
     column.cx = 250;
-    column.pszText = L"Path";
+    column.pszText = STR_PATH;
     ListView_InsertColumn(hwndContentView, COLUMN_PATH_IDX, &column);
     UpdateWindow(hwndContentView);
     
@@ -561,28 +585,29 @@ void setViewStyle(enum ViewStyle newViewStyle) {
 }
 
 void createLVColumns() {
-    LVCOLUMN column = {};
+    LVCOLUMN column = {0};
     column.mask = LVCF_WIDTH | LVCF_TEXT;
 
     column.cx = 220;
-    column.pszText = L"Name";
+    column.pszText = STR_NAME;
     ListView_InsertColumn(hwndContentView, COLUMN_NAME_IDX, &column);
 
     column.cx = 100;
-    column.pszText = L"Type";
+    column.pszText = STR_TYPE;
     ListView_InsertColumn(hwndContentView, COLUMN_TYPE_IDX, &column);
 
     column.cx = 60;
-    column.pszText = L"Size";
+    column.pszText = STR_SIZE;
     ListView_InsertColumn(hwndContentView, COLUMN_SIZE_IDX, &column);
 
     column.cx = 100;
-    column.pszText = L"Date";
+    column.pszText = STR_DATE;
     ListView_InsertColumn(hwndContentView, COLUMN_DATE_IDX, &column);
 }
 
 void createContentView() {
-    hwndContentView = CreateWindowEx(0, WC_LISTVIEW, NULL, WS_VISIBLE | WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_BORDER | LVS_OWNERDATA | LVS_REPORT |                                 LVS_SHAREIMAGELISTS, 0, 0, 0, 0, hwndMain, (HMENU)NULL, globalHInstance, NULL);
+    hwndContentView = CreateWindowEx(0, WC_LISTVIEW, NULL, WS_VISIBLE | WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_BORDER | LVS_OWNERDATA | LVS_REPORT | LVS_SHAREIMAGELISTS,
+                      0, 0, 0, 0, hwndMain, (HMENU)NULL, globalHInstance, NULL);
     
     OrigWndProc = (WNDPROC)SetWindowLongPtr(hwndContentView, GWLP_WNDPROC, (LONG_PTR)ContentViewWndProc);
     createLVColumns();
@@ -601,8 +626,8 @@ void onMenuItemEditClick() {
     if (numSelectedItems == 1 && selectedItems[0]->type == TYPE_FILE) {
         static const wchar_t editorPath[] = L"C:\\windows\\notepad.exe";
         
-        wchar_t path[MAX_PATH];
-        wchar_t parameters[MAX_PATH];
+        wchar_t path[MAX_PATH] = {0};
+        wchar_t parameters[MAX_PATH] = {0};
         getFileNodePath(selectedItems[0], path);
         swprintf_s(parameters, MAX_PATH, L"\"%ls\"", path);
         getFileNodePath(selectedItems[0]->parent, path);
@@ -632,15 +657,15 @@ void onMenuItemDeleteClick() {
 
 void onMenuItemRenameClick() {
     if (numSelectedItems == 1) {
-        wchar_t* result = InputDialog(L"Rename", L"Enter new name:", selectedItems[0]->name, true);
+        wchar_t* result = InputDialog(STR_RENAME, STR_ENTER_NEW_NAME, selectedItems[0]->name, true);
         if (result) {
-            wchar_t newFilename[MAX_PATH];
+            wchar_t newFilename[MAX_PATH] = {0};
             getFileNodePath(selectedItems[0]->parent, newFilename);
             wcscat_s(newFilename, MAX_PATH, L"\\");
             wcscat_s(newFilename, MAX_PATH, result);
             free(result);
             
-            wchar_t oldFilename[MAX_PATH];
+            wchar_t oldFilename[MAX_PATH] = {0};
             getFileNodePath(selectedItems[0], oldFilename);
             MoveFileW(oldFilename, newFilename);
             navigateRefresh();
@@ -649,25 +674,25 @@ void onMenuItemRenameClick() {
 }
 
 void onMenuItemPasteClick() {
-    wchar_t path[MAX_PATH];
+    wchar_t path[MAX_PATH] = {0};
     getFileNodePath(currPathFileNode, path);
     if (!isPathExists(path)) return;
     pasteFiles(path);
 }
 
 void onMenuItemPasteShortcutClick() {
-    wchar_t path[MAX_PATH];
+    wchar_t path[MAX_PATH] = {0};
     getFileNodePath(currPathFileNode, path);
     if (!isPathExists(path)) return;
     pasteShortcuts(path);   
 }
 
 void onMenuItemNewFolderClick() {
-    wchar_t path[MAX_PATH];
+    wchar_t path[MAX_PATH] = {0};
     getFileNodePath(currPathFileNode, path);
     if (!isPathExists(path)) return;
     
-    wchar_t* result = InputDialog(L"New Folder", L"Enter folder name:", NULL, false);
+    wchar_t* result = InputDialog(STR_NEW_FOLDER, STR_ENTER_FOLDER_NAME, NULL, false);
     if (result) {
         wcscat_s(path, MAX_PATH, L"\\");
         wcscat_s(path, MAX_PATH, result);
@@ -681,11 +706,11 @@ void onMenuItemNewFolderClick() {
 }
 
 void onMenuItemNewFileClick() {
-    wchar_t path[MAX_PATH];
+    wchar_t path[MAX_PATH] = {0};
     getFileNodePath(currPathFileNode, path);
     if (!isPathExists(path)) return;
     
-    wchar_t* result = InputDialog(L"New File", L"Enter file name:", NULL, false);
+    wchar_t* result = InputDialog(STR_NEW_FILE, STR_ENTER_FILE_NAME, NULL, false);
     if (result) {
         wcscat_s(path, MAX_PATH, L"\\");
         wcscat_s(path, MAX_PATH, result);
@@ -703,6 +728,34 @@ void onMenuItemSelectAllClick() {
     ListView_SetItemState(hwndContentView, -1, 0, LVIS_SELECTED);
     ListView_SetItemState(hwndContentView, -1, LVIS_SELECTED, LVIS_SELECTED);
     SetFocus(hwndContentView);
+}
+
+static void onMenuItemMountISOImageClick() {
+    if (numSelectedItems != 1) {
+        MessageBox(NULL, MSG_INVALID_ISO_IMAGE_FILE, STR_ALERT, MB_OK);
+        return;
+    }
+    
+    wchar_t currentISOPath[MAX_PATH] = {0};
+    HKEY hkey;
+    getFileNodePath(selectedItems[0], currentISOPath);
+    
+    if (!isPathExists(currentISOPath) || !hasFileExtension(currentISOPath, L"iso")) {
+        MessageBox(NULL, MSG_INVALID_ISO_IMAGE_FILE, STR_ALERT, MB_OK);
+        return;
+    }
+    
+    if (RegCreateKey(HKEY_CURRENT_USER, L"SOFTWARE\\Winlator\\WFM\\CurrentISOPath", &hkey) == ERROR_SUCCESS) {
+        RegSetValue(hkey, NULL, REG_SZ, currentISOPath, (wcslen(currentISOPath) + 1) * sizeof(wchar_t));
+        RegCloseKey(hkey);
+    }
+    
+    navigateRefresh();
+}
+
+static void onMenuItemUnmountISOImageClick() {
+    RegDeleteKey(HKEY_CURRENT_USER, L"SOFTWARE\\Winlator\\WFM\\CurrentISOPath");
+    navigateRefresh();
 }
 
 static int compareType(const void* a, const void* b) {
@@ -762,47 +815,29 @@ void refreshContentView() {
     clearContentView();
     UpdateWindow(hwndContentView);
     
-    wchar_t path[MAX_PATH];
     struct FileNode* child = currPathFileNode->children;
-    LARGE_INTEGER filesize;
-    WIN32_FILE_ATTRIBUTE_DATA info;
-    HIMAGELIST himl = 0;
     
     numItems = getChildNodeCount(currPathFileNode);
-    items = malloc(numItems * sizeof(struct ListItem));
+    items = calloc(numItems, sizeof(struct ListItem));
     int index = 0;
     
     while (child) {
-        getFileNodePath(child, path);
-        GetFileAttributesEx(path, GetFileExInfoStandard, &info);
         struct ListItem* item = &items[index++];
         item->node = child;
-        item->size = 0;
-        
-        if ((info.dwFileAttributes & FILE_ATTRIBUTE_ARCHIVE)) {
-            filesize.LowPart = info.nFileSizeLow;
-            filesize.HighPart = info.nFileSizeHigh;
-            item->size = filesize.QuadPart;
-        }
-        
-        item->modifiedTime = info.ftLastWriteTime;
-        item->path = NULL;
         item->loaded = false;
+
+        fillFileInfo(child, item);
         
-        if (himl == 0) {
-            SHFILEINFO sfi;             
-            if (viewStyle == STYLE_LARGE_ICON) {
-                himl = (HIMAGELIST)SHGetFileInfo(path, 0, &sfi, sizeof(SHFILEINFO), SHGFI_SYSICONINDEX | SHGFI_ICON);
-            }
-            else himl = (HIMAGELIST)SHGetFileInfo(path, 0, &sfi, sizeof(SHFILEINFO), SHGFI_SYSICONINDEX | SHGFI_SMALLICON);
-        }
         child = child->sibling;
     }
 
+    HIMAGELIST himlBig, himlSmall;
+    Shell_GetImageLists(&himlBig, &himlSmall);
+    
     if (viewStyle == STYLE_LARGE_ICON) {
-        ListView_SetImageList(hwndContentView, himl, LVSIL_NORMAL);
+        ListView_SetImageList(hwndContentView, himlBig, LVSIL_NORMAL);
     }
-    else ListView_SetImageList(hwndContentView, himl, LVSIL_SMALL);
+    else ListView_SetImageList(hwndContentView, himlSmall, LVSIL_SMALL);
 
     if (sortColumnIdx != -1) sortItems();
     ListView_SetItemCountEx(hwndContentView, numItems, 0);

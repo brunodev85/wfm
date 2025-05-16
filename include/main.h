@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <unistd.h>
 #include <string.h>
 #include <windows.h>
 #include <commctrl.h>
@@ -13,6 +14,26 @@
 #include <strsafe.h>
 #include <shlobj.h>
 #include <process.h>
+#include <time.h>
+#include <math.h>
+#include <cdio/cdio.h>
+#include <cdio/iso9660.h>
+
+static inline void alertf(const char *fmt, ...) {
+    char text[128] = {0};
+    va_list args;
+    va_start(args, fmt);
+    vsprintf_s(text, 128, fmt, args);
+    va_end(args);
+    MessageBoxA(NULL, text, "Alert", MB_OK);
+}
+
+static inline void timetToFileTime(time_t t, LPFILETIME result) {
+    ULARGE_INTEGER timeValue;
+    timeValue.QuadPart = (t * 10000000LL) + 116444736000000000LL;
+    result->dwLowDateTime = timeValue.LowPart;
+    result->dwHighDateTime = timeValue.HighPart;
+}
 
 #include "resource.h"
 #include "content_view.h"
@@ -25,12 +46,16 @@
 #include "file_actions.h"
 #include "file_utils.h"
 #include "input_dialog.h"
+#include "strings.h"
 
-//#define DEBUG
-
-#ifdef DEBUG
-void debug_printf(const char *fmt, ...);
-#endif
+#define MEMFREE(x) \
+    do { \
+        if (x != NULL) { \
+            free(x); \
+            x = NULL; \
+        } \
+    } \
+    while(0)
 
 void navigateToFileNode(struct FileNode* node);
 void navigateToPath(wchar_t* path);

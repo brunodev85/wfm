@@ -25,7 +25,7 @@ static HWND hwndSearchButton;
 static HANDLE hMorePopupMenu;
 
 static bool isEditMode;
-static wchar_t keyword[64];
+static wchar_t keyword[64] = {0};
 static bool searchEditEmpty = true;
 static struct AddrButton* addrButtons = NULL;
 static int numAddrButtons = 0;
@@ -40,7 +40,7 @@ HWND hwndNavbar = NULL;
 static void createMorePopupMenu(struct FileNode* parent) {  
     HMENU menu = CreatePopupMenu();
 
-    MENUITEMINFO item = {};
+    MENUITEMINFO item = {0};
     item.cbSize = sizeof(MENUITEMINFO);
     item.fMask = MIIM_TYPE | MIIM_DATA | MIIM_ID;
     item.fType = MFT_STRING;
@@ -100,7 +100,7 @@ static void setEditMode(bool value) {
     SendMessage(hwndAddrEdit, EM_SETREADONLY, isEditMode ? FALSE : TRUE, 0);
 
     if (isEditMode) {
-        wchar_t path[MAX_PATH];
+        wchar_t path[MAX_PATH] = {0};
         getFileNodePath(currPathFileNode, path);
         SendMessage(hwndAddrEdit, WM_SETTEXT, 0, (LPARAM)path);
         PostMessage(hwndAddrEdit, EM_SETSEL, 0, -1);
@@ -115,7 +115,7 @@ static void updateSearchEdit() {
     SendMessage(hwndSearchEdit, WM_GETTEXT, 64, (LPARAM)keyword);
     searchEditEmpty = wcslen(keyword) == 0;
     if (searchEditEmpty) {
-        swprintf_s(keyword, 64, L"Search %ls", currPathFileNode->name);
+        swprintf_s(keyword, 64, STR_SEARCH L" %ls", currPathFileNode->name);
         SendMessage(hwndSearchEdit, WM_SETTEXT, 0, (LPARAM)keyword);
     }
 }
@@ -125,10 +125,10 @@ LRESULT CALLBACK NavbarWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam
         case WM_CTLCOLORSTATIC: {
             HWND hwndControl = (HWND)lParam;
             if (hwndControl == hwndAddrEditWrapper) {
-                return isEditMode ? GetSysColorBrush(COLOR_WINDOW) : GetSysColorBrush(COLOR_BTNFACE);
+                return (LRESULT)(isEditMode ? GetSysColorBrush(COLOR_WINDOW) : GetSysColorBrush(COLOR_BTNFACE));
             }
             else if (hwndControl == hwndSearchEditWrapper) {
-                return (HBRUSH)GetStockObject(WHITE_BRUSH);
+                return (LRESULT)GetStockObject(WHITE_BRUSH);
             }
             break;
         }
@@ -203,7 +203,7 @@ LRESULT CALLBACK NavbarWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam
                 GetMenuItemInfo(hMorePopupMenu, LOWORD(wParam), FALSE, &item);
                 struct FileNode* node = (struct FileNode*)item.dwItemData;
                 
-                wchar_t path[MAX_PATH];
+                wchar_t path[MAX_PATH] = {0};
                 getFileNodePath(node, path);
                 
                 navigateToPath(path);
@@ -221,7 +221,7 @@ LRESULT CALLBACK SearchEditWrapperWndProc(HWND hwnd, UINT msg, WPARAM wParam, LP
         HWND hwndControl = (HWND)lParam;
         if (hwndControl == hwndSearchEdit) {
             SetTextColor((HDC)wParam, searchEditEmpty ? RGB(128, 128, 128) : RGB(0, 0, 0));
-            return (HBRUSH)GetStockObject(WHITE_BRUSH);
+            return (LRESULT)((HBRUSH)GetStockObject(WHITE_BRUSH));
         }
     }
     return SearchEditWrapperOrigWndProc(hwnd, msg, wParam, lParam);

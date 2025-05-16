@@ -16,7 +16,7 @@ extern HWND hwndTreeview;
 HWND hwndSizebar = NULL;
 
 static void setMouseTracking() {
-    TRACKMOUSEEVENT tme = {};
+    TRACKMOUSEEVENT tme = {0};
     tme.cbSize = sizeof(TRACKMOUSEEVENT);
     tme.dwFlags = TME_LEAVE;
     tme.hwndTrack = hwndSizebar;

@@ -1,16 +1,7 @@
-#include "main.h"
+#include <cdio/cdio.h>
+#include <cdio/iso9660.h>
 
-#ifdef DEBUG
-void debug_printf(const char *fmt, ...) {
-    FILE *f = fopen("debug.txt", "a");
-    if (f == NULL) return;
-    va_list args;
-    va_start(args, fmt);
-    vfprintf(f, fmt, args);
-    va_end(args);
-    fclose(f);
-}
-#endif
+#include "main.h"
 
 static const wchar_t mainWndClass[] = L"WFM-MainWnd";
 
@@ -24,6 +15,8 @@ extern HWND hwndTreeview;
 
 HINSTANCE globalHInstance = NULL;
 HWND hwndMain = NULL;
+
+static wchar_t* targetPath = NULL;
 
 void GetWindowRectInParent(HWND hwnd, RECT* rect) {
     GetWindowRect(hwnd, rect);
@@ -149,8 +142,8 @@ LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
             break;
         }
         case WM_CLOSE: {
-            wchar_t msg[] = L"Are you sure you want to exit?";
-            if (MessageBox(NULL, msg, L"Confirm Exit", MB_YESNO | MB_ICONQUESTION) == IDYES) {
+            wchar_t msg[] = MSG_CONFIRM_EXIT_APP;
+            if (MessageBox(NULL, msg, STR_CONFIRM_EXIT, MB_YESNO | MB_ICONQUESTION) == IDYES) {
                 PostQuitMessage(0);
             }
             return 0;
@@ -209,13 +202,44 @@ void navigateRefresh() {
     }
 }
 
+static void onExtractISOFiles() {
+    if (!targetPath) return;
+    wchar_t parentPath[MAX_PATH] = {0};
+    getParentDirFromPath(targetPath, parentPath);
+    
+    ShellExecute(hwndMain, L"open", targetPath, NULL, parentPath, SW_SHOW);
+    MEMFREE(targetPath);
+}
+
+static void openCDDriveFile(wchar_t* path) {
+    wchar_t mountFile[MAX_PATH] = {0};
+    if (!getCDDriveMountFile(mountFile)) return;
+    
+    char filename[MAX_PATH] = {0};
+    toUnixPath(path, filename);
+    
+    targetPath = wcsdup(path);
+    
+    clearDirectory(L"X:");
+    if (hasFileExtension(path, L"exe")) {
+        extractFilesFromISOImage(mountFile, NULL, L"X:\\", &onExtractISOFiles);
+    }
+    else extractFilesFromISOImage(mountFile, filename, path, &onExtractISOFiles);
+}
+
 void openFileNode(struct FileNode* node) {
     if (node->type == TYPE_FILE) {
-        wchar_t path[MAX_PATH];
-        wchar_t parentPath[MAX_PATH];
+        wchar_t path[MAX_PATH] = {0};
+        wchar_t parentPath[MAX_PATH] = {0};
         getFileNodePath(node, path);
-        getFileNodePath(node->parent, parentPath);
-        ShellExecute(hwndMain, L"open", path, NULL, parentPath, SW_SHOW);
+        
+        if (isCDDrivePath(path) && !isPathExists(path)) {
+            openCDDriveFile(path);
+        }
+        else {
+            getFileNodePath(node->parent, parentPath);
+            ShellExecute(hwndMain, L"open", path, NULL, parentPath, SW_SHOW);
+        }
     }
     else navigateToFileNode(node);
 }
@@ -226,7 +250,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine,
     
     globalHInstance = hInstance;
 
-    WNDCLASSEX wcx;
+    WNDCLASSEX wcx = {0};
     wcx.cbSize = sizeof(wcx);
     wcx.style = CS_HREDRAW | CS_VREDRAW;
     wcx.lpfnWndProc = &MainWndProc;
@@ -262,7 +286,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine,
     createStatusbar();
     
     setViewStyle(STYLE_DETAILS);
-    int treeviewWidth = hwndWidth * 0.2;
+    int treeviewWidth = hwndWidth * 0.2f;
     SetWindowPos(hwndTreeview, NULL, 0, 0, treeviewWidth, 0, SWP_NOZORDER | SWP_NOMOVE);    
     
     if (numArgs > 1) {
