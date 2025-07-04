@@ -10,6 +10,7 @@
 #include <windows.h>
 #include <commctrl.h>
 #include <wingdi.h>
+#include <winnls.h>
 #include <wchar.h>
 #include <strsafe.h>
 #include <shlobj.h>

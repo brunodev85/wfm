@@ -1,22 +1,23 @@
 #include "main.h"
 
 #define TBBUTTON_COMMAND_OFFSET (WM_APP + 100)
+#define NUM_BUTTONS 7
 
 struct ToolButton {
-    wchar_t *text;
+    wchar_t* text;
     int bmpId;
     void(*proc)();
     bool separate;
 };
 
 struct ToolButton buttons[] = {
-    {STR_UP, 0, &onMenuItemUpClick, true},
-    {STR_COPY, 1, &onMenuItemCopyClick, false},
-    {STR_CUT, 2, &onMenuItemCutClick, false},
-    {STR_PASTE, 3, &onMenuItemPasteClick, false},
-    {STR_DELETE, 4, &onMenuItemDeleteClick, true},
-    {STR_NEW_FOLDER, 5, &onMenuItemNewFolderClick, false},
-    {STR_NEW_FILE, 6, &onMenuItemNewFileClick, false}
+    {NULL, 0, &onMenuItemUpClick, true},
+    {NULL, 1, &onMenuItemCopyClick, false},
+    {NULL, 2, &onMenuItemCutClick, false},
+    {NULL, 3, &onMenuItemPasteClick, false},
+    {NULL, 4, &onMenuItemDeleteClick, true},
+    {NULL, 5, &onMenuItemNewFolderClick, false},
+    {NULL, 6, &onMenuItemNewFileClick, false}
 };
 
 static WNDPROC OrigWndProc;
@@ -31,12 +32,18 @@ LRESULT CALLBACK ToolbarWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 }
 
 void createToolButtons() {
-    const int numButtons = sizeof(buttons) / sizeof(buttons[0]);
+    buttons[0].text = lc_str.up;
+    buttons[1].text = lc_str.copy;
+    buttons[2].text = lc_str.cut;
+    buttons[3].text = lc_str.paste;
+    buttons[4].text = lc_str.delete;
+    buttons[5].text = lc_str.new_folder;
+    buttons[6].text = lc_str.new_file;
 
     SendMessage(hwndToolbar, TB_BUTTONSTRUCTSIZE, (WPARAM)sizeof(TBBUTTON), 0);
     SendMessage(hwndToolbar, TB_SETINDENT, 2, 0);
 
-    HIMAGELIST hImageList = ImageList_Create(16, 16, ILC_COLOR32, numButtons, 0);
+    HIMAGELIST hImageList = ImageList_Create(16, 16, ILC_COLOR32, NUM_BUTTONS, 0);
     
     HICON hiUp = (HICON)LoadImage(globalHInstance, MAKEINTRESOURCE(IDI_UP), IMAGE_ICON, 16, 16, 0);
     HICON hiCopy = (HICON)LoadImage(globalHInstance, MAKEINTRESOURCE(IDI_COPY), IMAGE_ICON, 16, 16, 0);
@@ -63,7 +70,7 @@ void createToolButtons() {
     tbButton.fsState = TBSTATE_ENABLED;
     tbButton.fsStyle = BTNS_BUTTON;
 
-    for (int i = 0, j = 0; i < numButtons; i++, j++) {
+    for (int i = 0, j = 0; i < NUM_BUTTONS; i++, j++) {
         tbButton.iBitmap = buttons[i].bmpId;
         tbButton.idCommand = TBBUTTON_COMMAND_OFFSET + i;
         tbButton.iString = (INT_PTR)buttons[i].text;

@@ -41,22 +41,22 @@ struct ContextMenuItem {
     wchar_t* cmdData;
 };
 
-static void onMenuItemMountISOImageClick();
-static void onMenuItemUnmountISOImageClick();
+static void onMenuItemLoadISOImageClick();
+static void onMenuItemUnloadISOImageClick();
 
-static struct ContextMenuItem cmiOpen = {STR_OPEN, &onMenuItemOpenClick, NULL};
-static struct ContextMenuItem cmiEdit = {STR_EDIT, &onMenuItemEditClick, NULL};
-static struct ContextMenuItem cmiCut = {STR_CUT, &onMenuItemCutClick, NULL};
-static struct ContextMenuItem cmiCopy = {STR_COPY, &onMenuItemCopyClick, NULL};
-static struct ContextMenuItem cmiCreateShortcut = {STR_CREATE_SHORTCUT, &onMenuItemCreateShortcutClick, NULL};
-static struct ContextMenuItem cmiDelete = {STR_DELETE, &onMenuItemDeleteClick, NULL};
-static struct ContextMenuItem cmiRename = {STR_RENAME, &onMenuItemRenameClick, NULL};
-static struct ContextMenuItem cmiPaste = {STR_PASTE, &onMenuItemPasteClick, NULL};
-static struct ContextMenuItem cmiPasteShortcut = {STR_PASTE_SHORTCUT, &onMenuItemPasteShortcutClick, NULL};
-static struct ContextMenuItem cmiNewFolder = {STR_NEW_FOLDER, &onMenuItemNewFolderClick, NULL};
-static struct ContextMenuItem cmiNewFile = {STR_NEW_FILE, &onMenuItemNewFileClick, NULL};
-static struct ContextMenuItem cmiMountISOImage = {NULL, &onMenuItemMountISOImageClick, NULL};
-static struct ContextMenuItem cmiUnmountISOImage = {STR_UNMOUNT_IMAGE, &onMenuItemUnmountISOImageClick, NULL};
+static struct ContextMenuItem cmiOpen = {NULL, &onMenuItemOpenClick, NULL};
+static struct ContextMenuItem cmiEdit = {NULL, &onMenuItemEditClick, NULL};
+static struct ContextMenuItem cmiCut = {NULL, &onMenuItemCutClick, NULL};
+static struct ContextMenuItem cmiCopy = {NULL, &onMenuItemCopyClick, NULL};
+static struct ContextMenuItem cmiCreateShortcut = {NULL, &onMenuItemCreateShortcutClick, NULL};
+static struct ContextMenuItem cmiDelete = {NULL, &onMenuItemDeleteClick, NULL};
+static struct ContextMenuItem cmiRename = {NULL, &onMenuItemRenameClick, NULL};
+static struct ContextMenuItem cmiPaste = {NULL, &onMenuItemPasteClick, NULL};
+static struct ContextMenuItem cmiPasteShortcut = {NULL, &onMenuItemPasteShortcutClick, NULL};
+static struct ContextMenuItem cmiNewFolder = {NULL, &onMenuItemNewFolderClick, NULL};
+static struct ContextMenuItem cmiNewFile = {NULL, &onMenuItemNewFileClick, NULL};
+static struct ContextMenuItem cmiLoadISOImage = {NULL, &onMenuItemLoadISOImageClick, NULL};
+static struct ContextMenuItem cmiUnloadISOImage = {NULL, &onMenuItemUnloadISOImageClick, NULL};
 
 static WNDPROC OrigWndProc;
 static struct ListItem* items = NULL;
@@ -85,32 +85,26 @@ static void fillFileInfo(struct FileNode* node, struct ListItem* item) {
     memset(&item->modifiedTime, 0, sizeof(FILETIME));
     
     if (node->type == TYPE_FILE) {
-        if (node->metadata) {
-            item->size = node->metadata->size;
-            timetToFileTime(node->metadata->modifiedTime, &item->modifiedTime);
-        }
-        else {
-            LARGE_INTEGER filesize;
-            WIN32_FILE_ATTRIBUTE_DATA info = {0};
+        LARGE_INTEGER filesize;
+        WIN32_FILE_ATTRIBUTE_DATA info = {0};
 
-            wchar_t path[MAX_PATH] = {0};
-            getFileNodePath(node, path);
-            GetFileAttributesEx(path, GetFileExInfoStandard, &info);        
-            
-            if ((info.dwFileAttributes & FILE_ATTRIBUTE_ARCHIVE)) {
-                filesize.LowPart = info.nFileSizeLow;
-                filesize.HighPart = info.nFileSizeHigh;
-                item->size = filesize.QuadPart;
-            }
-            
-            memcpy(&item->modifiedTime, &info.ftLastWriteTime, sizeof(FILETIME));
-        }        
+        wchar_t path[MAX_PATH] = {0};
+        getFileNodePath(node, path);
+        GetFileAttributesEx(path, GetFileExInfoStandard, &info);        
+
+        if ((info.dwFileAttributes & FILE_ATTRIBUTE_ARCHIVE)) {
+            filesize.LowPart = info.nFileSizeLow;
+            filesize.HighPart = info.nFileSizeHigh;
+            item->size = filesize.QuadPart;
+        }
+
+        memcpy(&item->modifiedTime, &info.ftLastWriteTime, sizeof(FILETIME));
     }
 }
 
 static void updateStatusbar() {
     wchar_t statusText[32] = {0};
-    swprintf_s(statusText, 32, L"%d " STR_ITEMS, numItems);
+    swprintf_s(statusText, 32, L"%d %ls", numItems, lc_str.items);
     setStatusbarText(statusText);   
 }
 
@@ -319,16 +313,7 @@ static void createContextMenuFromRegistry(int* id) {
     RegCloseKey(hkeyContextMenu);
 }
 
-static void createISOImageContextMenu(int* id) {
-    wchar_t* itemText = STR_ISO_IMAGE;
-    MENUITEMINFO item = {0};
-    item.cbSize = sizeof(MENUITEMINFO);
-    item.fMask = MIIM_TYPE | MIIM_ID | MIIM_SUBMENU;
-    item.fType = MFT_STRING;
-    item.dwTypeData = itemText;
-    item.cch = wcslen(itemText);
-    item.wID = ++(*id);
-    
+static void createCDDriveContextMenu(int* id) {
     HMENU hSubmenu = CreatePopupMenu();
     
     wchar_t currentISOPath[MAX_PATH] = {0};
@@ -339,13 +324,22 @@ static void createISOImageContextMenu(int* id) {
         RegCloseKey(hkey);
     }
     
-    itemText = calloc(MAX_PATH, sizeof(wchar_t));
-    swprintf_s(itemText, MAX_PATH, STR_MOUNT_IMAGE L" <%ls>", currentISOPathLen != MAX_PATH ? currentISOPath : STR_NO_MEDIA);
-    cmiMountISOImage.text = itemText;
-    addContextMenuItem(hSubmenu, (*id)++, &cmiMountISOImage, false);
-    MEMFREE(cmiMountISOImage.text);
+    wchar_t itemText[64] = {0};
+    swprintf_s(itemText, MAX_PATH, L"%ls <%ls>", lc_str.load_iso_image, currentISOPathLen != MAX_PATH ? currentISOPath : lc_str.no_media);
+    cmiLoadISOImage.text = itemText;
+    addContextMenuItem(hSubmenu, (*id)++, &cmiLoadISOImage, false);
+    cmiLoadISOImage.text = NULL;
     
-    addContextMenuItem(hSubmenu, (*id)++, &cmiUnmountISOImage, false);    
+    addContextMenuItem(hSubmenu, (*id)++, &cmiUnloadISOImage, false);
+    
+    MENUITEMINFO item = {0};
+    item.cbSize = sizeof(MENUITEMINFO);
+    item.fMask = MIIM_TYPE | MIIM_ID | MIIM_SUBMENU;
+    item.fType = MFT_STRING;
+    swprintf_s(itemText, 64, L"%ls [X:]", lc_str.cd_drive);
+    item.dwTypeData = itemText;
+    item.cch = wcslen(itemText);
+    item.wID = ++(*id);    
     
     item.hSubMenu = hSubmenu;
     InsertMenuItem(hContextMenu, -1, TRUE, &item);    
@@ -366,7 +360,7 @@ static void createContextMenu(enum ContextMenuType type) {
             if (selectedItems[0]->type == TYPE_FILE) {
                 addContextMenuItem(hMenu, id++, &cmiOpen, false);
                 addContextMenuItem(hMenu, id++, &cmiEdit, true);
-                createISOImageContextMenu(&id);
+                createCDDriveContextMenu(&id);
                 createContextMenuFromRegistry(&id);
             }
             else addContextMenuItem(hMenu, id++, &cmiOpen, true);
@@ -381,7 +375,7 @@ static void createContextMenu(enum ContextMenuType type) {
     else {
         addContextMenuItem(hMenu, id++, &cmiPaste, false);
         addContextMenuItem(hMenu, id++, &cmiPasteShortcut, true);
-        createISOImageContextMenu(&id);
+        createCDDriveContextMenu(&id);
         addContextMenuItem(hMenu, id++, &cmiNewFolder, false);
         addContextMenuItem(hMenu, id++, &cmiNewFile, false);
     }
@@ -547,7 +541,7 @@ void searchFor(wchar_t* keyword) {
     LVCOLUMN column = {0};
     column.mask = LVCF_WIDTH | LVCF_TEXT;
     column.cx = 250;
-    column.pszText = STR_PATH;
+    column.pszText = lc_str.path;
     ListView_InsertColumn(hwndContentView, COLUMN_PATH_IDX, &column);
     UpdateWindow(hwndContentView);
     
@@ -589,25 +583,38 @@ void createLVColumns() {
     column.mask = LVCF_WIDTH | LVCF_TEXT;
 
     column.cx = 220;
-    column.pszText = STR_NAME;
+    column.pszText = lc_str.name;
     ListView_InsertColumn(hwndContentView, COLUMN_NAME_IDX, &column);
 
     column.cx = 100;
-    column.pszText = STR_TYPE;
+    column.pszText = lc_str.type;
     ListView_InsertColumn(hwndContentView, COLUMN_TYPE_IDX, &column);
 
     column.cx = 60;
-    column.pszText = STR_SIZE;
+    column.pszText = lc_str.size;
     ListView_InsertColumn(hwndContentView, COLUMN_SIZE_IDX, &column);
 
     column.cx = 100;
-    column.pszText = STR_DATE;
+    column.pszText = lc_str.date;
     ListView_InsertColumn(hwndContentView, COLUMN_DATE_IDX, &column);
 }
 
 void createContentView() {
     hwndContentView = CreateWindowEx(0, WC_LISTVIEW, NULL, WS_VISIBLE | WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_BORDER | LVS_OWNERDATA | LVS_REPORT | LVS_SHAREIMAGELISTS,
-                      0, 0, 0, 0, hwndMain, (HMENU)NULL, globalHInstance, NULL);
+                                     0, 0, 0, 0, hwndMain, (HMENU)NULL, globalHInstance, NULL);
+
+    cmiOpen.text = lc_str.open;
+    cmiEdit.text = lc_str.edit;
+    cmiCut.text = lc_str.cut;
+    cmiCopy.text = lc_str.copy;
+    cmiCreateShortcut.text = lc_str.create_shortcut;
+    cmiDelete.text = lc_str.delete;
+    cmiRename.text = lc_str.rename;
+    cmiPaste.text = lc_str.paste;
+    cmiPasteShortcut.text = lc_str.paste_shortcut;
+    cmiNewFolder.text = lc_str.new_folder;
+    cmiNewFile.text = lc_str.new_file;
+    cmiUnloadISOImage.text = lc_str.unload_iso_image;
     
     OrigWndProc = (WNDPROC)SetWindowLongPtr(hwndContentView, GWLP_WNDPROC, (LONG_PTR)ContentViewWndProc);
     createLVColumns();
@@ -657,7 +664,7 @@ void onMenuItemDeleteClick() {
 
 void onMenuItemRenameClick() {
     if (numSelectedItems == 1) {
-        wchar_t* result = InputDialog(STR_RENAME, STR_ENTER_NEW_NAME, selectedItems[0]->name, true);
+        wchar_t* result = InputDialog(lc_str.rename, lc_str.enter_new_name, selectedItems[0]->name, true);
         if (result) {
             wchar_t newFilename[MAX_PATH] = {0};
             getFileNodePath(selectedItems[0]->parent, newFilename);
@@ -692,7 +699,7 @@ void onMenuItemNewFolderClick() {
     getFileNodePath(currPathFileNode, path);
     if (!isPathExists(path)) return;
     
-    wchar_t* result = InputDialog(STR_NEW_FOLDER, STR_ENTER_FOLDER_NAME, NULL, false);
+    wchar_t* result = InputDialog(lc_str.new_folder, lc_str.enter_folder_name, NULL, false);
     if (result) {
         wcscat_s(path, MAX_PATH, L"\\");
         wcscat_s(path, MAX_PATH, result);
@@ -710,7 +717,7 @@ void onMenuItemNewFileClick() {
     getFileNodePath(currPathFileNode, path);
     if (!isPathExists(path)) return;
     
-    wchar_t* result = InputDialog(STR_NEW_FILE, STR_ENTER_FILE_NAME, NULL, false);
+    wchar_t* result = InputDialog(lc_str.new_file, lc_str.enter_file_name, NULL, false);
     if (result) {
         wcscat_s(path, MAX_PATH, L"\\");
         wcscat_s(path, MAX_PATH, result);
@@ -730,9 +737,9 @@ void onMenuItemSelectAllClick() {
     SetFocus(hwndContentView);
 }
 
-static void onMenuItemMountISOImageClick() {
+static void onMenuItemLoadISOImageClick() {
     if (numSelectedItems != 1) {
-        MessageBox(NULL, MSG_INVALID_ISO_IMAGE_FILE, STR_ALERT, MB_OK);
+        MessageBox(NULL, lc_str.msg_invalid_iso_image_file, lc_str.alert, MB_OK);
         return;
     }
     
@@ -740,8 +747,10 @@ static void onMenuItemMountISOImageClick() {
     HKEY hkey;
     getFileNodePath(selectedItems[0], currentISOPath);
     
-    if (!isPathExists(currentISOPath) || !hasFileExtension(currentISOPath, L"iso")) {
-        MessageBox(NULL, MSG_INVALID_ISO_IMAGE_FILE, STR_ALERT, MB_OK);
+    if (!isPathExists(currentISOPath) || !(hasFileExtension(currentISOPath, L"iso") || 
+                                           hasFileExtension(currentISOPath, L"bin") ||
+                                           hasFileExtension(currentISOPath, L"cue"))) {
+        MessageBox(NULL, lc_str.msg_invalid_iso_image_file, lc_str.alert, MB_OK);
         return;
     }
     
@@ -750,10 +759,12 @@ static void onMenuItemMountISOImageClick() {
         RegCloseKey(hkey);
     }
     
-    navigateRefresh();
+    clearDirectory(L"X:");
+    extractFilesFromISOImage(currentISOPath, L"X:\\");
 }
 
-static void onMenuItemUnmountISOImageClick() {
+static void onMenuItemUnloadISOImageClick() {
+    clearDirectory(L"X:");
     RegDeleteKey(HKEY_CURRENT_USER, L"SOFTWARE\\Winlator\\WFM\\CurrentISOPath");
     navigateRefresh();
 }

@@ -18,61 +18,7 @@ static struct FileNode* allocFileNode(wchar_t* name, enum FileType type) {
     node->sibling = NULL;
     node->children = NULL;
     node->hasChildDirs = false;
-    node->metadata = NULL;
     return node;
-}
-
-static struct FileNode* buildChildNodesFromCDDrive(struct FileNode* parent, wchar_t* absolutePath, bool onlyDirs, int* numFiles) {
-    wchar_t nameBuf[MAX_PATH] = {0};
-    if (numFiles) *numFiles = 0;
-    if (!getCDDriveMountFile(nameBuf)) return NULL;
-    
-    char filename[MAX_PATH] = {0};
-    WideCharToMultiByte(CP_ACP, 0, nameBuf, -1, filename, MAX_PATH, NULL, NULL);
-    
-    iso9660_t* iso = iso9660_open(filename);
-    if (!iso) return NULL;
-    
-    toUnixPath(absolutePath, filename);
-    
-    struct FileNode* firstChild = NULL;
-    struct FileNode* lastChild = NULL;    
-    
-    CdioISO9660FileList_t* isoFileList = iso9660_ifs_readdir(iso, filename);
-    if (isoFileList) {
-        CdioListNode_t* isoNode;
-        _CDIO_LIST_FOREACH(isoNode, isoFileList) {
-            iso9660_stat_t* isoStat = (iso9660_stat_t *)_cdio_list_node_data(isoNode);
-            
-            if (strcmp(isoStat->filename, ".") == 0 || strcmp(isoStat->filename, "..") == 0 || 
-               (onlyDirs && isoStat->type == _STAT_FILE)) continue;
-               
-            if (!numFiles) {
-                memset(filename, 0, MAX_PATH);
-                iso9660_name_translate(isoStat->filename, filename);
-                
-                wmemset(nameBuf, L'\0', MAX_PATH);
-                MultiByteToWideChar(CP_ACP, 0, filename, -1, nameBuf, MAX_PATH);
-                
-                struct FileMetadata* metadata = calloc(1, sizeof(struct FileMetadata));
-                metadata->size = isoStat->total_size;
-                metadata->modifiedTime = mktime(&isoStat->tm);
-                
-                struct FileNode* child = allocFileNode(wcsdup(nameBuf), isoStat->type == _STAT_DIR ? TYPE_DIR : TYPE_FILE);
-                child->metadata = metadata;
-                child->parent = parent;
-                
-                if (!firstChild) firstChild = child;
-                if (lastChild) lastChild->sibling = child;
-                lastChild = child;
-            }
-            else (*numFiles)++;
-        }
-
-        iso9660_filelist_free(isoFileList);
-    }    
-    
-    return firstChild;
 }
 
 int getChildNodeCount(struct FileNode* parent) {
@@ -92,7 +38,6 @@ void freeChildNodes(struct FileNode* parent) {
         struct FileNode* sibling = child->sibling;
         
         MEMFREE(child->name);
-        MEMFREE(child->metadata);
         MEMFREE(child);
         
         child = sibling;
@@ -132,11 +77,7 @@ void buildChildNodes(struct FileNode* parent, bool onlyDirs) {
     else {
         wchar_t path[MAX_PATH] = {0};
         getFileNodePath(parent, path);
-        
-        if (isCDDrivePath(path)) {
-            firstChild = buildChildNodesFromCDDrive(parent, path, onlyDirs, NULL);
-        }
-        else if (!isPathExists(path)) return;
+        if (!isPathExists(path)) return;
         
         WIN32_FIND_DATA wfd = {0};
         wcscat_s(path, MAX_PATH, L"\\*");
@@ -159,7 +100,8 @@ void buildChildNodes(struct FileNode* parent, bool onlyDirs) {
                 lastChild = child;              
             }               
         }
-        while (FindNextFile(handle, &wfd) != 0);
+        while (FindNextFile(handle, &wfd));
+        FindClose(handle);
     }
     
     parent->children = firstChild;
@@ -178,12 +120,7 @@ void checkIfNodesHasChildDirs(struct FileNode* node, bool deep) {
         else {
             getFileNodePath(parent, path);
             
-            if (isCDDrivePath(path)) {
-                int numDirs = 0;
-                buildChildNodesFromCDDrive(parent, path, true, &numDirs);
-                if (numDirs > 0) parent->hasChildDirs = true;
-            }
-            else if (isPathExists(path)) {
+            if (isPathExists(path)) {
                 WIN32_FIND_DATA wfd = {0};
                 wcscat_s(path, MAX_PATH, L"\\*");
                 HANDLE handle = FindFirstFile(path, &wfd);
@@ -196,8 +133,9 @@ void checkIfNodesHasChildDirs(struct FileNode* node, bool deep) {
                             break;
                         }               
                     }
-                    while (FindNextFile(handle, &wfd) != 0);
-                }                
+                    while (FindNextFile(handle, &wfd));
+                    FindClose(handle);
+                }
             }
         }
         
@@ -213,7 +151,6 @@ static void freeCurrPathFileNode() {
         freeChildNodes(node);
         
         MEMFREE(node->name);
-        MEMFREE(node->metadata);
         MEMFREE(node);
         
         node = parent;
@@ -253,7 +190,7 @@ void setCurrPathFromString(wchar_t* path) {
     wchar_t tmp[MAX_PATH] = {0};
     wcscpy_s(tmp, MAX_PATH, path);
 
-    struct FileNode* currNode = allocFileNode(STR_COMPUTER, TYPE_COMPUTER);
+    struct FileNode* currNode = allocFileNode(lc_str.computer, TYPE_COMPUTER);
     
     wchar_t* token = wcstok(tmp, L"\\");
     int i = 0;
@@ -271,9 +208,9 @@ void setCurrPathFromString(wchar_t* path) {
 }
 
 void initFileNodes() {
-    struct FileNode* desktopNode = allocFileNode(STR_DESKTOP, TYPE_DESKTOP);
-    struct FileNode* documentsNode = allocFileNode(STR_DOCUMENTS, TYPE_PERSONAL);
-    struct FileNode* computerNode = allocFileNode(STR_COMPUTER, TYPE_COMPUTER);
+    struct FileNode* desktopNode = allocFileNode(lc_str.desktop, TYPE_DESKTOP);
+    struct FileNode* documentsNode = allocFileNode(lc_str.documents, TYPE_PERSONAL);
+    struct FileNode* computerNode = allocFileNode(lc_str.computer, TYPE_COMPUTER);
     
     desktopNode->sibling = documentsNode;
     documentsNode->sibling = computerNode;

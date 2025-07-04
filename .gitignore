@@ -1,3 +1,4 @@
 /obj
+/libcdio
 *.exe
 *.exe.dat

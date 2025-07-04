@@ -1,19 +1,18 @@
 OBJS=obj/main.o obj/content_view.o obj/toolbar.o obj/navbar.o obj/treeview.o obj/sizebar.o obj/statusbar.o obj/file_node.o obj/file_actions.o obj/input_dialog.o obj/resource.o
 INCLUDE_DIR=-I.\include -I.\include\libcdio
-EXECUTABLE=wfm.exe
-WARNS=-Wall
+EXE_NAME=wfm.exe
 
 LDFLAGS=-s -lcomctl32 -lgdi32 -lole32 -luuid .\libcdio.dll -Wl,--subsystem,windows
 RC=windres
-CFLAGS=-O2 -std=c99 -DUNICODE -D_UNICODE -DCOBJMACROS -D_WIN32_IE=0x0500 -DWINVER=0x500 ${WARNS}
+CFLAGS=-O2 -std=c99 -DUNICODE -D_UNICODE -DCOBJMACROS -DWINVER=0x0600 -Wall
 
-all: app
+all: ${EXE_NAME}
 
-app: ${OBJS}
-	${CC} -o ${EXECUTABLE} ${OBJS} ${LDFLAGS}
+${EXE_NAME}: ${OBJS}
+	${CC} -o ${EXE_NAME} ${OBJS} ${LDFLAGS}
 
 clean:
-	del obj\*.o ${EXECUTABLE}
+	del obj\*.o ${EXE_NAME}
 
 obj:
 	mkdir obj

@@ -1,23 +1,25 @@
 #define IDI_MAIN 101
-#define IDM_MAIN_MENU 102
-#define IDD_ABOUT 103
-#define IDI_GO 104
-#define IDI_REFRESH 105
-#define IDI_NAV_ARROW 106
-#define IDD_INPUT 107
-#define IDC_LABEL 108
-#define IDC_EDIT 109
-#define IDD_FILE_ACTION 110
-#define IDC_PRELOADER 111
-#define IDI_SEARCH 112
-#define IDI_CANCEL 113
-#define IDI_UP 114
-#define IDI_COPY 115
-#define IDI_CUT 116
-#define IDI_PASTE 117
-#define IDI_DELETE 118
-#define IDI_NEW_FOLDER 119
-#define IDI_NEW_FILE 120
+#define IDD_ABOUT 102
+#define IDI_GO 103
+#define IDI_REFRESH 104
+#define IDI_NAV_ARROW 105
+#define IDD_INPUT 106
+#define IDC_LABEL 107
+#define IDC_EDIT 108
+#define IDC_APP_NAME 109
+#define IDC_APP_VERSION 110
+#define IDC_APP_DEV_NAME 111
+#define IDD_FILE_ACTION 112
+#define IDC_PRELOADER 113
+#define IDI_SEARCH 114
+#define IDI_CANCEL 115
+#define IDI_UP 116
+#define IDI_COPY 117
+#define IDI_CUT 118
+#define IDI_PASTE 119
+#define IDI_DELETE 120
+#define IDI_NEW_FOLDER 121
+#define IDI_NEW_FILE 122
 
 #define IDI_PRELOADER_1 201
 #define IDI_PRELOADER_2 202
@@ -44,70 +46,102 @@
 #define IDC_STATIC -1
 #endif
 
-#define STR_FULL_APP_NAME L"Winlator File Manager"
-#define STR_APP_VERSION L"Version 1.5"
-#define STR_APP_DEVELOPTER L"by BrunoSX"
-#define STR_APPLICATION L"Application"
-#define STR_SHORTCUT L"Shortcut"
-#define STR_FILE L"File"
-#define STR_FOLDER L"Folder"
-#define STR_LOCAL_DRIVE L"Local Drive"
-#define STR_CD_DRIVE L"CD Drive"
-#define STR_COMPUTER L"Computer"
-#define STR_DESKTOP L"Desktop"
-#define STR_DOCUMENTS L"Documents"
-#define STR_EXIT L"Exit"
-#define STR_EDIT L"Edit"
-#define STR_CUT L"Cut"
-#define STR_COPY L"Copy"
-#define STR_PASTE L"Paste"
-#define STR_PASTE_SHORTCUT L"Paste Shortcut"
-#define STR_SELECT_ALL L"Select All"
-#define STR_VIEW L"View"
-#define STR_LARGE_ICONS L"Large Icons"
-#define STR_SMALL_ICONS L"Small Icons"
-#define STR_LIST L"List"
-#define STR_DETAILS L"Details"
-#define STR_HELP L"Help"
-#define STR_ABOUT L"About"
-#define STR_OK L"OK"
-#define STR_CANCEL L"Cancel"
-#define STR_LOADING L"Loading..."
-#define STR_OPEN L"Open"
-#define STR_CREATE_SHORTCUT L"Create Shortcut"
-#define STR_DELETE L"Delete"
-#define STR_RENAME L"Rename"
-#define STR_NEW_FOLDER L"New Folder"
-#define STR_NEW_FILE L"New File"
-#define STR_ITEMS L"Items"
-#define STR_ISO_IMAGE L"ISO Image"
-#define STR_MOUNT_IMAGE L"Mount Image"
-#define STR_UNMOUNT_IMAGE L"Unmount Image"
-#define STR_NO_MEDIA L"No media"
-#define STR_ALERT L"Alert"
-#define STR_ENTER_FOLDER_NAME L"Enter folder name:"
-#define STR_ENTER_FILE_NAME L"Enter file name:"
-#define STR_ENTER_NEW_NAME L"Enter new name:"
-#define STR_NAME L"Name"
-#define STR_TYPE L"Type"
-#define STR_SIZE L"Size"
-#define STR_DATE L"Date"
-#define STR_PATH L"Path"
-#define STR_DELETING_FILES L"Deleting files"
-#define STR_COPYING_FILES L"Copying files"
-#define STR_MOVING_FILES L"Moving files"
-#define STR_PREPARING_FILES L"Preparing files"
-#define STR_CONFIRM_DELETE L"Confirm Delete"
-#define STR_CONFIRM_EXIT L"Confirm Exit"
-#define STR_SEARCH L"Search"
-#define STR_UP L"Up"
+#define APP_NAME L"Winlator File Manager"
+#define APP_VERSION L"1.5"
+#define APP_DEV_NAME L"BrunoSX"
 
-#define MSG_INVALID_ISO_IMAGE_FILE L"Invalid ISO Image file!"
-#define MSG_DELETING_FILES L"Deleting files, please wait..."
-#define MSG_COPYING_FILES L"Copying files, please wait..."
-#define MSG_MOVING_FILES L"Moving files, please wait..."
-#define MSG_PREPARING_FILES L"Preparing files, please wait..."
-#define MSG_CANCEL_FILE_OPERATION L"Do you want to cancel the operation?"
-#define MSG_CONFIRM_DELETE_ITEM L"Are you sure you want to delete \"%ls\"?"
-#define MSG_CONFIRM_DELETE_MULTIPLE_ITEMS L"Are you sure you want to delete the %d items?"
-#define MSG_CONFIRM_EXIT_APP L"Are you sure you want to exit?"
+#ifndef RESOURCE_H
+#define RESOURCE_H
+
+struct LC_STR {
+    wchar_t* app_name;
+    wchar_t* app_version;
+    wchar_t* app_dev_name;
+    wchar_t* application;
+    wchar_t* shortcut;
+    wchar_t* file;
+    wchar_t* folder;
+    wchar_t* local_drive;
+    wchar_t* cd_drive;
+    wchar_t* computer;
+    wchar_t* desktop;
+    wchar_t* documents;
+    wchar_t* exit;
+    wchar_t* edit;
+    wchar_t* cut;
+    wchar_t* copy;
+    wchar_t* paste;
+    wchar_t* paste_shortcut;
+    wchar_t* select_all;
+    wchar_t* view;
+    wchar_t* large_icons;
+    wchar_t* small_icons;
+    wchar_t* list;
+    wchar_t* details;
+    wchar_t* help;
+    wchar_t* about;
+    wchar_t* ok;
+    wchar_t* cancel;
+    wchar_t* loading;
+    wchar_t* open;
+    wchar_t* create_shortcut;
+    wchar_t* delete;
+    wchar_t* rename;
+    wchar_t* new_folder;
+    wchar_t* new_file;
+    wchar_t* items;
+    wchar_t* load_iso_image;
+    wchar_t* unload_iso_image;
+    wchar_t* no_media;
+    wchar_t* alert;
+    wchar_t* enter_folder_name;
+    wchar_t* enter_file_name;
+    wchar_t* enter_new_name;
+    wchar_t* name;
+    wchar_t* type;
+    wchar_t* size;
+    wchar_t* date;
+    wchar_t* path;
+    wchar_t* deleting_files;
+    wchar_t* copying_files;
+    wchar_t* moving_files;
+    wchar_t* extracting_files;
+    wchar_t* confirm_delete;
+    wchar_t* confirm_exit;
+    wchar_t* search;
+    wchar_t* up;
+    
+    wchar_t* fmt_file;
+    
+    wchar_t* msg_invalid_iso_image_file;
+    wchar_t* msg_deleting_files;
+    wchar_t* msg_copying_files;
+    wchar_t* msg_moving_files;
+    wchar_t* msg_extracting_files;
+    wchar_t* msg_cancel_file_operation;
+    wchar_t* msg_confirm_delete_item;
+    wchar_t* msg_confirm_delete_multiple_items;
+    wchar_t* msg_confirm_exit_app;
+};
+
+extern struct LC_STR lc_str;
+
+#include "locale/strings_en.h"
+#include "locale/strings_pt.h"
+#include "locale/strings_ru.h"
+
+#define STARTS_WITH(a, b) (a[0] == b[0] && a[1] == b[1])
+
+static inline void loadLCStrings(wchar_t* localeName) {
+    if (STARTS_WITH(localeName, L"pt")) {
+        loadStrings_pt();
+    }
+    else if (STARTS_WITH(localeName, L"ru")) {
+        loadStrings_ru();
+    }    
+    else loadStrings_en();
+}
+
+#undef STARTS_WITH
+
+#endif

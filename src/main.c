@@ -1,6 +1,3 @@
-#include <cdio/cdio.h>
-#include <cdio/iso9660.h>
-
 #include "main.h"
 
 static const wchar_t mainWndClass[] = L"WFM-MainWnd";
@@ -15,8 +12,7 @@ extern HWND hwndTreeview;
 
 HINSTANCE globalHInstance = NULL;
 HWND hwndMain = NULL;
-
-static wchar_t* targetPath = NULL;
+struct LC_STR lc_str = {0};
 
 void GetWindowRectInParent(HWND hwnd, RECT* rect) {
     GetWindowRect(hwnd, rect);
@@ -40,6 +36,11 @@ INT_PTR CALLBACK AboutDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM l
             GetWindowRect(GetParent(hwndDlg), &rect);
             GetClientRect(hwndDlg, &rect1);
             SetWindowPos(hwndDlg, NULL, (rect.right + rect.left) / 2 - (rect1.right - rect1.left) / 2, (rect.bottom + rect.top) / 2 - (rect1.bottom - rect1.top) / 2, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
+            
+            SetWindowText(hwndDlg, lc_str.about);
+            SetWindowText(GetDlgItem(hwndDlg, IDC_APP_NAME), lc_str.app_name);
+            SetWindowText(GetDlgItem(hwndDlg, IDC_APP_VERSION), lc_str.app_version);
+            SetWindowText(GetDlgItem(hwndDlg, IDC_APP_DEV_NAME), lc_str.app_dev_name);
             return (INT_PTR)TRUE;
         }
     }
@@ -142,8 +143,7 @@ LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
             break;
         }
         case WM_CLOSE: {
-            wchar_t msg[] = MSG_CONFIRM_EXIT_APP;
-            if (MessageBox(NULL, msg, STR_CONFIRM_EXIT, MB_YESNO | MB_ICONQUESTION) == IDYES) {
+            if (MessageBox(NULL, lc_str.msg_confirm_exit_app, lc_str.confirm_exit, MB_YESNO | MB_ICONQUESTION) == IDYES) {
                 PostQuitMessage(0);
             }
             return 0;
@@ -202,51 +202,55 @@ void navigateRefresh() {
     }
 }
 
-static void onExtractISOFiles() {
-    if (!targetPath) return;
-    wchar_t parentPath[MAX_PATH] = {0};
-    getParentDirFromPath(targetPath, parentPath);
-    
-    ShellExecute(hwndMain, L"open", targetPath, NULL, parentPath, SW_SHOW);
-    MEMFREE(targetPath);
-}
-
-static void openCDDriveFile(wchar_t* path) {
-    wchar_t mountFile[MAX_PATH] = {0};
-    if (!getCDDriveMountFile(mountFile)) return;
-    
-    char filename[MAX_PATH] = {0};
-    toUnixPath(path, filename);
-    
-    targetPath = wcsdup(path);
-    
-    clearDirectory(L"X:");
-    if (hasFileExtension(path, L"exe")) {
-        extractFilesFromISOImage(mountFile, NULL, L"X:\\", &onExtractISOFiles);
-    }
-    else extractFilesFromISOImage(mountFile, filename, path, &onExtractISOFiles);
-}
-
 void openFileNode(struct FileNode* node) {
     if (node->type == TYPE_FILE) {
         wchar_t path[MAX_PATH] = {0};
         wchar_t parentPath[MAX_PATH] = {0};
         getFileNodePath(node, path);
-        
-        if (isCDDrivePath(path) && !isPathExists(path)) {
-            openCDDriveFile(path);
-        }
-        else {
-            getFileNodePath(node->parent, parentPath);
-            ShellExecute(hwndMain, L"open", path, NULL, parentPath, SW_SHOW);
-        }
+        getFileNodePath(node->parent, parentPath);
+        ShellExecute(hwndMain, L"open", path, NULL, parentPath, SW_SHOW);
     }
     else navigateToFileNode(node);
+}
+
+static void createMainMenu() {
+    HMENU hmFile = CreatePopupMenu();
+    AppendMenu(hmFile, MF_STRING, ID_FILE_EXIT, lc_str.exit);
+    
+    HMENU hmEdit = CreatePopupMenu();
+    AppendMenu(hmEdit, MF_STRING, ID_EDIT_CUT, lc_str.cut);
+    AppendMenu(hmEdit, MF_STRING, ID_EDIT_COPY, lc_str.copy);
+    AppendMenu(hmEdit, MF_STRING, ID_EDIT_PASTE, lc_str.paste);
+    AppendMenu(hmEdit, MF_STRING, ID_EDIT_PASTE_SHORTCUT, lc_str.paste_shortcut);
+    AppendMenu(hmEdit, MF_SEPARATOR, 0, NULL);
+    AppendMenu(hmEdit, MF_STRING, ID_EDIT_SELECT_ALL, lc_str.select_all);
+    
+    HMENU hmView = CreatePopupMenu();
+    AppendMenu(hmView, MF_STRING, ID_VIEW_LARGEICONS, lc_str.large_icons);
+    AppendMenu(hmView, MF_STRING, ID_VIEW_SMALLICONS, lc_str.small_icons);
+    AppendMenu(hmView, MF_STRING, ID_VIEW_LIST, lc_str.list);
+    AppendMenu(hmView, MF_STRING, ID_VIEW_DETAILS, lc_str.details);
+    
+    HMENU hmHelp = CreatePopupMenu();
+    AppendMenu(hmHelp, MF_STRING, ID_HELP_ABOUT, lc_str.about);
+    
+    HMENU hmMain = CreateMenu();
+    AppendMenu(hmMain, MF_POPUP, (UINT_PTR)hmFile, lc_str.file);
+    AppendMenu(hmMain, MF_POPUP, (UINT_PTR)hmEdit, lc_str.edit);
+    AppendMenu(hmMain, MF_POPUP, (UINT_PTR)hmView, lc_str.view);
+    AppendMenu(hmMain, MF_POPUP, (UINT_PTR)hmHelp, lc_str.help);
+    
+    SetMenu(hwndMain, hmMain);
 }
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine, int nCmdShow) {
     int numArgs;
     wchar_t** args = CommandLineToArgvW(GetCommandLineW(), &numArgs);
+    
+    wchar_t localeName[16] = {0};
+    GetSystemDefaultLocaleName(localeName, 16);
+    
+    loadLCStrings(localeName);
     
     globalHInstance = hInstance;
 
@@ -260,7 +264,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine,
     wcx.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_MAIN));
     wcx.hCursor = LoadCursor(hInstance, IDC_ARROW);
     wcx.hbrBackground = (HBRUSH)COLOR_WINDOW;
-    wcx.lpszMenuName = MAKEINTRESOURCE(IDM_MAIN_MENU);
     wcx.lpszClassName = mainWndClass;
     wcx.hIconSm = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_MAIN));
 
@@ -278,6 +281,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine,
                               0, 0, hwndWidth, hwndHeight, NULL, NULL, hInstance, NULL);
     if (!hwndMain) return 0;
     
+    createMainMenu();
     createToolbar();
     createNavbar();
     createTreeview();

@@ -115,7 +115,7 @@ static void updateSearchEdit() {
     SendMessage(hwndSearchEdit, WM_GETTEXT, 64, (LPARAM)keyword);
     searchEditEmpty = wcslen(keyword) == 0;
     if (searchEditEmpty) {
-        swprintf_s(keyword, 64, STR_SEARCH L" %ls", currPathFileNode->name);
+        swprintf_s(keyword, 64, L"%ls %ls", lc_str.search, currPathFileNode->name);
         SendMessage(hwndSearchEdit, WM_SETTEXT, 0, (LPARAM)keyword);
     }
 }

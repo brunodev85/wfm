@@ -19,9 +19,9 @@ struct FileInfo {
 };
 
 static inline bool isPathExists(wchar_t* path) {
-  DWORD dwAttrib = GetFileAttributes(path);
-  return (dwAttrib != INVALID_FILE_ATTRIBUTES && (
-         (dwAttrib & FILE_ATTRIBUTE_DIRECTORY) || (dwAttrib & FILE_ATTRIBUTE_ARCHIVE)));
+    DWORD dwAttrib = GetFileAttributes(path);
+    return (dwAttrib != INVALID_FILE_ATTRIBUTES && (
+           (dwAttrib & FILE_ATTRIBUTE_DIRECTORY) || (dwAttrib & FILE_ATTRIBUTE_ARCHIVE)));
 }
 
 static inline void formatFileSize(uint64_t size, wchar_t* formattedSize) {
@@ -45,7 +45,7 @@ static inline void formatFileSize(uint64_t size, wchar_t* formattedSize) {
 
 static inline void getParentDirFromPath(wchar_t* path, wchar_t* result) {
     wchar_t* lastSlash = wcsrchr(path, L'\\');
-    int len = lastSlash != NULL ? lastSlash - path + 1 : 1;
+    int len = lastSlash ? lastSlash - path + 1 : 1;
 
     memcpy(result, path, (len - 1) * sizeof(wchar_t));
     result[len-1] = L'\0';
@@ -53,7 +53,7 @@ static inline void getParentDirFromPath(wchar_t* path, wchar_t* result) {
 
 static inline void getBasenameFromPath(wchar_t* path, wchar_t* result, bool removeExt) {
     wchar_t* lastSlash = wcsrchr(path, L'\\');
-    int offset = lastSlash != NULL ? lastSlash - path + 1 : 0;
+    int offset = lastSlash ? lastSlash - path + 1 : 0;
     int len = (wcslen(path) - offset) + 1;
     
     memcpy(result, path + offset, len * sizeof(wchar_t));
@@ -123,45 +123,53 @@ static inline void getFileInfo(wchar_t* path, enum FileType type, bool largeIcon
     
     switch (type) {
         case TYPE_DIR:
-            wcscpy_s(result->typeName, 80, STR_FOLDER);
+            wcscpy_s(result->typeName, 80, lc_str.folder);
             break;
         case TYPE_DRIVE: {
             if (isCDDrivePath(path)) {
-                wcscpy_s(result->typeName, 80, STR_CD_DRIVE);           
+                wcscpy_s(result->typeName, 80, lc_str.cd_drive);           
             }
-            else wcscpy_s(result->typeName, 80, STR_LOCAL_DRIVE);
+            else wcscpy_s(result->typeName, 80, lc_str.local_drive);
             break;
         }
         case TYPE_DESKTOP:
-            wcscpy_s(result->typeName, 80, STR_DESKTOP);
+            wcscpy_s(result->typeName, 80, lc_str.desktop);
             break;
         case TYPE_PERSONAL:
-            wcscpy_s(result->typeName, 80, STR_FOLDER);
+            wcscpy_s(result->typeName, 80, lc_str.folder);
             break;
         case TYPE_COMPUTER:
-            wcscpy_s(result->typeName, 80, STR_COMPUTER);
+            wcscpy_s(result->typeName, 80, lc_str.computer);
             break;
         default: {
-            wcscpy_s(result->typeName, 80, STR_FILE);
+            wcscpy_s(result->typeName, 80, lc_str.file);
             wchar_t* ext = getFileExtension(path);
             
             if (ext) {
                 if (wcsicmp(ext, L"exe") == 0) {
-                    wcscpy_s(result->typeName, 80, STR_APPLICATION);
+                    wcscpy_s(result->typeName, 80, lc_str.application);
                 }
                 else if (wcsicmp(ext, L"lnk") == 0) {
-                    wcscpy_s(result->typeName, 80, STR_SHORTCUT);
+                    wcscpy_s(result->typeName, 80, lc_str.shortcut);
                 }
                 else {
                     wchar_t value[30] = {0};
                     strToUpper(ext, value);
-                    swprintf_s(result->typeName, 80, L"%ls %ls", value, STR_FILE);
+                    swprintf_s(result->typeName, 80, lc_str.fmt_file, value);
                 }
             }
             
             break;
         }
     }
+}
+
+static inline void makeDirs(wchar_t* path) {
+    if (isPathExists(path)) return;
+    wchar_t parentDir[MAX_PATH] = {0};
+    getParentDirFromPath(path, parentDir);
+    if (!isPathExists(parentDir)) makeDirs(parentDir);
+    CreateDirectory(path, NULL);
 }
 
 static inline void joinPaths(wchar_t* pathA, wchar_t* pathB, wchar_t* result) {
@@ -195,20 +203,20 @@ static inline void clearDirectory(wchar_t* targetPath) {
             
             wchar_t fullPath[MAX_PATH] = {0};
             joinPaths(targetPath, wfd.cFileName, fullPath);
+            bool isDir = (wfd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY);
             
-            if (wfd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+            if (isDir) {
                 clearDirectory(fullPath);
                 RemoveDirectory(fullPath);
             }
-            else if (wfd.dwFileAttributes & FILE_ATTRIBUTE_ARCHIVE) {
-                DeleteFile(fullPath);
-            }
+            else DeleteFile(fullPath);
         }
-        while (FindNextFile(handle, &wfd) != 0);
+        while (FindNextFile(handle, &wfd));
+        FindClose(handle);
     }
 }
 
-static inline bool getCDDriveMountFile(wchar_t* result) {
+static inline bool getCurrentISOPath(wchar_t* result) {
     wmemset(result, L'\0', MAX_PATH);
     int pathLen = MAX_PATH;
     HKEY hkey;

@@ -42,6 +42,8 @@ INT_PTR CALLBACK InputDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM l
 
             SetWindowText(hwndDlg, options.title);
             SetWindowText(GetDlgItem(hwndDlg, IDC_LABEL), options.label);
+            SetWindowText(GetDlgItem(hwndDlg, IDOK), lc_str.ok);
+            SetWindowText(GetDlgItem(hwndDlg, IDCANCEL), lc_str.cancel);
             
             HWND hwndEdit = GetDlgItem(hwndDlg, IDC_EDIT);
             if (options.defaultText) SetWindowText(hwndEdit, options.defaultText);

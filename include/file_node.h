@@ -3,11 +3,6 @@
 
 #include "file_utils.h"
 
-struct FileMetadata {
-    time_t modifiedTime;
-    uint64_t size;
-};
-
 struct FileNode {
     wchar_t* name;
     enum FileType type;
@@ -15,7 +10,6 @@ struct FileNode {
     struct FileNode* sibling;
     struct FileNode* children;
     bool hasChildDirs;
-    struct FileMetadata* metadata;
 };
 
 void initFileNodes();

@@ -124,6 +124,9 @@
 /* Define to 1 if you have the <string.h> header file. */
 #define HAVE_STRING_H 1
 
+/* Define to 1 if you have the <windows.h> header file. */
+#define HAVE_WINDOWS_H 1
+
 /* Define to 1 if you have the <sys/cdio.h> header file. */
 #undef HAVE_SYS_CDIO_H
 
@@ -150,9 +153,6 @@
 
 /* Define to 1 if you have the `vsnprintf' function. */
 #define HAVE_VSNPRINTF 1
-
-/* Define 1 if you have MinGW CD-ROM support */
-#define HAVE_WIN32_CDROM 1
 
 /* Define as const if the declaration of iconv() needs const. */
 #undef ICONV_CONST 
