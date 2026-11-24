@@ -320,8 +320,11 @@ void pasteFiles(wchar_t* dstDir) {
     actionData = calloc(1, sizeof(struct ActionData));
     
     int len = wcslen(dstDir);
-    actionData->dstPath = calloc(len + 2, sizeof(wchar_t));
+    actionData->dstPath = calloc(len + 3, sizeof(wchar_t));
     wcscpy_s(actionData->dstPath, len + 1, dstDir);
+    if (len == 2 && actionData->dstPath[len-1] == L':') {
+        actionData->dstPath[len++] = L'\\';
+    }
     actionData->dstPath[len+0] = L'\0';
     actionData->dstPath[len+1] = L'\0';
     
